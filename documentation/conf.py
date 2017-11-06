@@ -81,7 +81,7 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -94,18 +94,11 @@ html_theme = 'alabaster'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-# Custom sidebar templates, must be a dictionary that maps document names
-# to template names.
-#
-# This is required for the alabaster theme
-# refs: http://alabaster.readthedocs.io/en/latest/installation.html#sidebars
-html_sidebars = {
-    '**': [
-        'relations.html',  # needs 'show_related': True theme option to display
-        'searchbox.html',
-    ]
+html_logo = '_static/cloudio.png'
+html_theme_options = {
+    'logo_only': True,
+    'display_version': False,
 }
-
 
 # -- Options for HTMLHelp output ------------------------------------------
 
@@ -162,14 +155,3 @@ texinfo_documents = [
      author, 'cloudiO', 'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-# -- Markdown support -----------------------------------------------------
-
-from recommonmark.parser import CommonMarkParser
-
-source_parsers = {
-    '.md': CommonMarkParser,
-}
-
-source_suffix = ['.rst', '.md']
