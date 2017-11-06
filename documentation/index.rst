@@ -81,6 +81,6 @@ Finally the cloud.iO specification:
 
 .. toctree::
    :maxdepth: 2
-   :caption: Cloud Developer Documentation
+   :caption: cloud.iO Specification
 
    spec-protocols
