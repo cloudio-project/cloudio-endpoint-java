@@ -35,8 +35,8 @@ Finally the cloud.iO specification:
 
    intro-motivation
    intro-vision
-   intro-concepts
-   intro-components
+   intro-elements
+   intro-building-blocks
    intro-architecture
 
 

@@ -1,11 +1,13 @@
 Motivation
 ==========
 
-The issue
----------
-
 Many research projects need an infrastructure to monitor and control devices deployed to many different locations whereas in the most cases an internet
 connection is available. In the past, each project handled those tasks differently which led to some issues:
+
+.. figure:: _static/intro-motivation-1.svg
+   :align: center
+
+   Redundant communication systems
 
 * Each time a new solution for very similar problems were developed, which does not make sense from an economical point of view.
 * Most of the projects do not dispose enough budget for the communication to create a stable/flexible solution.
@@ -16,16 +18,4 @@ connection is available. In the past, each project handled those tasks different
 * Fine grained access control is not possible in the most cases.
 * Monitoring is often very inefficient (Database Polling for example).
 
-.. figure:: _static/intro-motivation-1.svg
-   :align: center
-
-
-Our solution: cloud.iO
-----------------------
-
-.. figure:: _static/intro-motivation-2.svg
-   :align: center
-   :figwidth: 50 %
-
-.. **cloud.iO is**:
-.. **cloud.iO is NOT**:
+**cloud.iO** is our attempt to unify those recurring tasks in academic projects under in common base layer.
