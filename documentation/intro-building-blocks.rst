@@ -45,7 +45,19 @@ MQTT
 
 AMQP
 ----
+|AMQP_link| (**A**\ dvanced **M**\ essage **Q**\ ueuing **P**\ rotocol) is a messaging protocol that enables conforming client applications to communicate with conforming messaging middleware brokers.
+
+Messaging brokers receive messages from publishers (applications that publish them, also known as producers) and route them to consumers (applications that process them).
+
+Since it is a network protocol, the publishers, consumers and the broker can all reside on different machines.
+
+The AMQP Model has the following view of the world: messages are published to exchanges, which are often compared to post offices or mailboxes. Exchanges then distribute message copies to queues using rules called bindings. Then AMQP brokers either deliver messages to consumers subscribed to queues, or consumers fetch/pull messages from queues on demand.
 
 .. |Spring_framework| raw:: html
 
    <a href="https://spring.io" target="_blank">Spring framework</a>
+
+.. |AMQP_link| raw:: html
+
+   <a href="https://www.amqp.org/" target="_blank">AMQP</a>
+

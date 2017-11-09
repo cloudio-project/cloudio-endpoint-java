@@ -20,6 +20,8 @@ Endpoints are distributed field devices featuring:
 * a set of sensors and/or actuators either directly integrated in the endpoint device or connected by some (local) networking technology like Zigbee for
   example.
 
+It needs a SSL certificate to communicate with cloud.iO (MQTT protocol). The definitions (interfaces, pre-processing steps, ...) are stored in CloudiO, but the implementation is done on back-end solutions, depending on the type of endpoint.
+
 An endpoint does:
 
 * publish his complete data model (including current values) when connecting to the cloud.
@@ -36,6 +38,8 @@ An applications is a computer programs that:
 * receive updates of subscribed input values without polling.
 * set values of output signals, which are typically set points for actuators.
 * access past values for any input or output signals.
+
+It needs a SSL certificate to communicate with CloudiO (AMQP protocol).
 
 An application can:
 
@@ -69,3 +73,6 @@ A user is the owner of endpoints and applications. A user:
 * can give other users access to his endpoints.
 * can give applications access to his endpoints.
 * can write his own applications.
+* needs a login and password to communicate with cloud.iO (AMQP protocol)
+
+We actually do not distinguish between different kind of users (simple users, developers, ...).
