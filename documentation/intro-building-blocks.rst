@@ -40,11 +40,28 @@ from a cloud.iO point of view:
 RabbitMQ
 --------
 
+|RabbitMQ_link| is a message **broker**: it accepts and forwards messages. You can think about it as a post office: when you put the mail that you want posting in a post box, you can be sure that Mr. Postman will eventually deliver the mail to your recipient. In this analogy, RabbitMQ is a post box, a post office and a postman.
+
+The major difference between RabbitMQ and the post office is that it doesn't deal with paper, instead it accepts, stores and forwards binary blobs of data - messages.
+
+RabbitMQ is stable, broadly used in production (Intagram as an example), scalable and has flexible message routing. User authentification and access rights are possible using multiple backends.
+
 MQTT
 ----
 
+|MQTT_link| (**M**\ essage **Q**\ ueue **T**\ elemetry **T**\ ransport) is a machine-to-machine (M2M) / IoT connectivity protocol. It was designed as an extremely lightweight publish/subscribe messaging transport. It is useful for connections with remote locations where a small code footprint is required and/or network bandwidth is at a premium.
+
+The design principles and aims of MQTT are much more simple and focused than those of AMQP; it provides publish-and-subscribe messaging (no queues, in spite of the name) and was specifically designed for resource-constrained devices and low bandwidth, high latency networks such as dial up lines and satellite links, for example. Basically, it can be used effectively in embedded systems.
+
+One of the advantages MQTT has over more full-featured “enterprise messaging” brokers is that its intentionally low footprint makes it ideal for today’s mobile and developing IoT style applications. In fact, companies like Facebook are using it as part of their mobile applications because it has such a low power draw and is light on network bandwidth.
+
+Some of the MQTT-based brokers support many thousands of concurrent device connections. It offers three qualities of service.
+
+MQTT’s strengths are simplicity (just five API methods), a compact binary packet payload (no message properties, compressed headers, much less verbose than something text-based like HTTP), and it makes a good fit for simple push messaging scenarios such as temperature updates, stock price tickers, oil pressure feeds or mobile notifications.
+
 AMQP
 ----
+
 |AMQP_link| (**A**\ dvanced **M**\ essage **Q**\ ueuing **P**\ rotocol) is a messaging protocol that enables conforming client applications to communicate with conforming messaging middleware brokers.
 
 Messaging brokers receive messages from publishers (applications that publish them, also known as producers) and route them to consumers (applications that process them).
@@ -52,6 +69,13 @@ Messaging brokers receive messages from publishers (applications that publish th
 Since it is a network protocol, the publishers, consumers and the broker can all reside on different machines.
 
 The AMQP Model has the following view of the world: messages are published to exchanges, which are often compared to post offices or mailboxes. Exchanges then distribute message copies to queues using rules called bindings. Then AMQP brokers either deliver messages to consumers subscribed to queues, or consumers fetch/pull messages from queues on demand.
+
+**RabbitMQ** uses AMQP at its core.
+
+.. figure:: _static/AMQP_hello.png
+   :align: center
+     
+   https://www.rabbitmq.com/tutorials/amqp-concepts.html 
 
 .. |Spring_framework| raw:: html
 
@@ -61,3 +85,10 @@ The AMQP Model has the following view of the world: messages are published to ex
 
    <a href="https://www.amqp.org/" target="_blank">AMQP</a>
 
+.. |MQTT_link| raw:: html
+
+   <a href="https://www.amqp.org/" target="_blank">MQTT</a>
+
+.. |RabbitMQ_link| raw:: html
+
+   <a href="https://www.rabbitmq.com/" target="_blank">RabbitMQ</a>
