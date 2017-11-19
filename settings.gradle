@@ -1,3 +1,4 @@
 rootProject.name = 'cloudio'
 
 include 'documentation'
+include 'cloud/cloudio-cloud-core'

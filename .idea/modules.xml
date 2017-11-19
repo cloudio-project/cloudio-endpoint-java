@@ -2,6 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core.iml" group="cloud/cloudio-cloud-core" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core_main.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core_main.iml" group="cloud/cloudio-cloud-core" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core_test.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core_test.iml" group="cloud/cloudio-cloud-core" />
       <module fileurl="file://$PROJECT_DIR$/cloudio.iml" filepath="$PROJECT_DIR$/cloudio.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/documentation/documentation.iml" filepath="$PROJECT_DIR$/.idea/modules/documentation/documentation.iml" group="documentation" />
     </modules>
