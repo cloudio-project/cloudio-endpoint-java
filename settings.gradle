@@ -1,1 +1,3 @@
 rootProject.name = 'cloudio'
+
+include 'documentation'

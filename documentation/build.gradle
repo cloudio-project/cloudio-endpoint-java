@@ -1,0 +1,6 @@
+task buildDocumentation(type: Exec) {
+    if (project.hasProperty('sphinxPath')) {
+        environment['PATH'] = project.sphinxPath
+    }
+    commandLine 'make', 'html'
+}

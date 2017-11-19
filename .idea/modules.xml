@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/cloudio.iml" filepath="$PROJECT_DIR$/cloudio.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/documentation/documentation.iml" filepath="$PROJECT_DIR$/.idea/modules/documentation/documentation.iml" group="documentation" />
     </modules>
   </component>
 </project>
