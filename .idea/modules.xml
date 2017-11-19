@@ -2,6 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-backend-mongo-influx/cloud_cloudio-cloud-backend-mongo-influx.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-backend-mongo-influx/cloud_cloudio-cloud-backend-mongo-influx.iml" group="cloud/cloudio-cloud-backend-mongo-influx" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-backend-mongo-influx/cloud_cloudio-cloud-backend-mongo-influx_main.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-backend-mongo-influx/cloud_cloudio-cloud-backend-mongo-influx_main.iml" group="cloud/cloudio-cloud-backend-mongo-influx" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-backend-mongo-influx/cloud_cloudio-cloud-backend-mongo-influx_test.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-backend-mongo-influx/cloud_cloudio-cloud-backend-mongo-influx_test.iml" group="cloud/cloudio-cloud-backend-mongo-influx" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core.iml" group="cloud/cloudio-cloud-core" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core_main.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core_main.iml" group="cloud/cloudio-cloud-core" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core_test.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloud_cloudio-cloud-core_test.iml" group="cloud/cloudio-cloud-core" />

@@ -2,3 +2,4 @@ rootProject.name = 'cloudio'
 
 include 'documentation'
 include 'cloud/cloudio-cloud-core'
+include 'cloud/cloudio-cloud-backend-mongo-influx'

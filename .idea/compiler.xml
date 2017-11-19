@@ -11,5 +11,11 @@
       <entry name="!?*.kt" />
       <entry name="!?*.clj" />
     </wildcardResourcePatterns>
+    <bytecodeTargetLevel>
+      <module name="cloud_cloudio-cloud-backend-mongo-influx_main" target="1.8" />
+      <module name="cloud_cloudio-cloud-backend-mongo-influx_test" target="1.8" />
+      <module name="cloud_cloudio-cloud-core_main" target="1.8" />
+      <module name="cloud_cloudio-cloud-core_test" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>

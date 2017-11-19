@@ -1,0 +1,54 @@
+buildscript {
+	repositories {
+		jcenter()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:1.5.4.RELEASE")
+		classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.1.3")
+		classpath('se.transmode.gradle:gradle-docker:1.2')
+	}
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'docker'
+
+jar {
+	baseName = 'cloudio-cloud-backend-mongo-influx'
+	version = '0.1.0'
+	exclude 'application.properties', '*.jks', '*.p12'
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+	mavenLocal()
+	jcenter()
+    mavenCentral()
+	maven {
+		url "https://oss.jfrog.org/artifactory/list/oss-snapshot-local"
+	}
+}
+
+dependencies {
+    compile("ch.hevs.cloudio:cloudio-cloud-microservice:0.1.0-SNAPSHOT")
+    compile("org.springframework.boot:spring-boot-starter-data-mongodb")
+    compile("org.influxdb:influxdb-java:2.7")
+    testCompile('org.springframework.boot:spring-boot-starter-test')
+}
+
+task buildDocker(type: Docker, dependsOn: build) {
+    if (project.hasProperty('dockerPath')) {
+        dockerBinary = project.dockerPath +"/docker"
+    }
+	push = false
+    applicationName = jar.baseName
+    dockerfile = file('src/main/docker/Dockerfile')
+    doFirst {
+        copy {
+            from jar
+            into stageDir
+        }
+    }
+}
