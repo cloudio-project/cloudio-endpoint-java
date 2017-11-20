@@ -20,7 +20,11 @@ apply plugin: 'maven-publish'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
+version = rootProject.version
+group = rootProject.group
+
 repositories {
+    mavenLocal()
 	jcenter()
 }
 

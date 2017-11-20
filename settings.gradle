@@ -1,5 +1,9 @@
 rootProject.name = 'cloudio'
 
 include 'documentation'
-include 'cloud/cloudio-cloud-core'
-include 'cloud/cloudio-cloud-backend-mongo-influx'
+
+include 'cloudio-cloud-core'
+project(":cloudio-cloud-core").projectDir = file("cloud/cloudio-cloud-core")
+
+include 'cloudio-cloud-backend-mongo-influx'
+project(":cloudio-cloud-backend-mongo-influx").projectDir = file("cloud/cloudio-cloud-backend-mongo-influx")
