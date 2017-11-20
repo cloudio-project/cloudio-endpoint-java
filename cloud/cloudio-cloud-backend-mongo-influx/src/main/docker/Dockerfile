@@ -4,7 +4,7 @@ MAINTAINER Michael Clausen (michael.clausen@hevs.ch)
 ########################################################################################################################
 # Copy Spring Boot application into container.                                                                         #
 ########################################################################################################################
-ADD cloudio-cloud-backend-mongo-influx-0.1.0-SNAPSHOT.jar app.jar
+ADD cloudio-cloud-backend-mongo-influx-0.1.2-SNAPSHOT.jar app.jar
 RUN sh -s 'touch /app.jar'
 
 ########################################################################################################################

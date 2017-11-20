@@ -41,7 +41,10 @@ dependencies {
     testCompile('org.springframework.boot:spring-boot-starter-test')
 }
 
-task buildDocker(type: Docker, dependsOn: build) {
+build.dependsOn ':cloudio-cloud-core:install'
+
+task buildDockerImage(type: Docker, dependsOn: build) {
+    group 'build'
     if (project.hasProperty('dockerPath')) {
         dockerBinary = project.dockerPath +"/docker"
     }
