@@ -1,37 +1,25 @@
 plugins {
-    id 'kotlin'
-    id "io.spring.dependency-management"
+    id 'java'
     id 'maven'
     id 'maven-publish'
 }
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
 
-version = rootProject.version
 group = rootProject.group
+version = rootProject.version
 
 repositories {
     mavenLocal()
     jcenter()
-    mavenCentral()
 }
 
 dependencies {
-    compile("org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlinVersion}")
-    compile("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
-    compile('com.fasterxml.jackson.module:jackson-module-kotlin:2.9.0')
-
-    compile('org.springframework.boot:spring-boot-starter-amqp')
-    compile('org.springframework.boot:spring-boot-starter-security')
-
-    testCompile('org.springframework.boot:spring-boot-starter-test')
-}
-
-dependencyManagement {
-    imports {
-        mavenBom("org.springframework.boot:spring-boot-dependencies:${springBootVersion}")
-    }
+    compile 'com.fasterxml.jackson.core:jackson-core:2.6.4'
+    compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.0.2'
+    compile 'org.slf4j:slf4j-api:1.7.13'
+    testCompile 'junit:junit:4.12'
 }
 
 task sourcesJar(type: Jar, dependsOn:classes) {

@@ -1,2 +1,21 @@
+buildscript {
+    ext {
+        kotlinVersion = '1.1.60'
+        springBootVersion = '1.5.8.RELEASE'
+        dockerPluginVersion = '1.2'
+    }
+
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
+        classpath("org.jetbrains.kotlin:kotlin-allopen:${kotlinVersion}")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath("se.transmode.gradle:gradle-docker:${dockerPluginVersion}")
+    }
+}
+
 group 'ch.hevs.cloudio'
 version '0.1.2-SNAPSHOT'

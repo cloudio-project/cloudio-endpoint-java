@@ -9,6 +9,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloudio-cloud-core.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloudio-cloud-core.iml" group="cloudio-cloud-core" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloudio-cloud-core_main.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloudio-cloud-core_main.iml" group="cloudio-cloud-core" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloudio-cloud-core_test.iml" filepath="$PROJECT_DIR$/.idea/modules/cloud/cloudio-cloud-core/cloudio-cloud-core_test.iml" group="cloudio-cloud-core" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/endpoint/cloudio-endpoint-java/cloudio-endpoint-java.iml" filepath="$PROJECT_DIR$/.idea/modules/endpoint/cloudio-endpoint-java/cloudio-endpoint-java.iml" group="cloudio-endpoint-java" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/endpoint/cloudio-endpoint-java/cloudio-endpoint-java_main.iml" filepath="$PROJECT_DIR$/.idea/modules/endpoint/cloudio-endpoint-java/cloudio-endpoint-java_main.iml" group="cloudio-endpoint-java" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/endpoint/cloudio-endpoint-java/cloudio-endpoint-java_test.iml" filepath="$PROJECT_DIR$/.idea/modules/endpoint/cloudio-endpoint-java/cloudio-endpoint-java_test.iml" group="cloudio-endpoint-java" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/documentation/documentation.iml" filepath="$PROJECT_DIR$/.idea/modules/documentation/documentation.iml" group="documentation" />
     </modules>
   </component>
