@@ -10,3 +10,6 @@ project(":cloudio-cloud-backend-mongo-influx").projectDir = file("cloud/cloudio-
 
 include 'cloudio-endpoint-java'
 project(":cloudio-endpoint-java").projectDir = file("endpoint/cloudio-endpoint-java")
+
+include 'cloudio-cloud-run'
+project(":cloudio-cloud-run").projectDir = file("cloud/cloudio-cloud-run")

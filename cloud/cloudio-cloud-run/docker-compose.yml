@@ -1,0 +1,23 @@
+version: '2'
+services:
+  cloudio-broker:
+    image: cloudio/cloudio-rabbitmq:3.6.2
+    environment:
+      - RABBITMQ_ADMIN_PASSWORD=admin
+    ports:
+      - "8883:8883"
+      - "5671:5671"
+      - "15672:15672"
+    volumes:
+      - ./certificates:/certificates
+      - ./config:/config
+      - ./log/broker:/log
+  cloudio-mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+  cloudio-influx:
+    image: influxdb
+    ports:
+      - "8086:8086"
+      - "8083:8083"

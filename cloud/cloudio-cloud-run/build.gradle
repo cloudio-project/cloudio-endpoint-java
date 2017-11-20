@@ -1,0 +1,36 @@
+task prepareContainers(type: Exec) {
+    group = 'containers'
+    commandLine './prepare.sh'
+}
+
+task startMessageBrokerContainer(type: Exec, dependsOn: prepareContainers) {
+    group = 'containers'
+    commandLine 'docker-compose', 'start', 'cloudio-broker'
+}
+
+task startInfluxDBContainer(type: Exec, dependsOn: prepareContainers) {
+    group = 'containers'
+    commandLine 'docker-compose', 'start', 'cloudio-influx'
+}
+
+task startMongoDBContainer(type: Exec, dependsOn: prepareContainers) {
+    group = 'containers'
+    commandLine 'docker-compose', 'start', 'cloudio-mongo'
+}
+
+task startBrokerAndDatabaseContainers(type: Task, dependsOn: [startMessageBrokerContainer, startInfluxDBContainer, startMongoDBContainer]) {
+    group = 'containers'
+}
+
+task stopAllContainers(type: Exec) {
+    group = 'containers'
+    commandLine 'docker-compose', 'stop'
+}
+
+task removeContainersAndData(type: Exec) {
+    group = 'containers'
+    commandLine 'docker-compose', 'rm', '-f', '-s', '-v'
+    doLast {
+        delete 'certificates', 'config', 'log'
+    }
+}
