@@ -1,6 +1,15 @@
-task buildDocumentation(type: Exec) {
+task build(type: Exec) {
+    group = 'build'
     if (project.hasProperty('sphinxPath')) {
         environment['PATH'] = project.sphinxPath
     }
     commandLine 'make', 'html'
+}
+
+task clean(type: Exec) {
+    group = 'build'
+    if (project.hasProperty('sphinxPath')) {
+        environment['PATH'] = project.sphinxPath
+    }
+    commandLine 'make', 'clean'
 }
