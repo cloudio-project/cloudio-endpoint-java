@@ -226,11 +226,11 @@ public class AttributesTest implements CloudioAttributeContainer, CloudioAttribu
     }
 
     @Test
-    public void testParameterAttributeInitException() throws Exception {
+    public void testParameterAttributeInit() throws Exception {
         CloudioAttribute<Integer> attribute = createAttribute(Integer.class, CloudioAttributeConstraint.Parameter);
 
-        exception.expect(CloudioAttributeConstraintException.class);
         attribute.setInitialValue(55);
+        Assert.assertEquals(attribute.getValue().intValue(), 55);
     }
 
     @Test
