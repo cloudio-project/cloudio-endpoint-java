@@ -54,7 +54,7 @@ public enum CloudioAttributeConstraint {
      *                                      attribute.
      */
     void endpointWillInitialize() throws CloudioAttributeConstraintException {
-        if (this == CloudioAttributeConstraint.Static || this == CloudioAttributeConstraint.Parameter) {
+        if (this == CloudioAttributeConstraint.Static) {
             throw new CloudioAttributeConstraintException("Can not initialize an attribute with constraint " + this);
         }
     }
@@ -66,11 +66,7 @@ public enum CloudioAttributeConstraint {
      * @throws CloudioAttributeConstraintException In the case the constraint does not allow the endpoint to initialize the
      *                                             attribute.
      */
-    void endpointWillInitializeAdLib() throws CloudioAttributeConstraintException {
-        if (this == CloudioAttributeConstraint.Parameter) {
-            throw new CloudioAttributeConstraintException("Can not initialize an attribute with constraint " + this);
-        }
-    }
+    void endpointWillInitializeAdLib() throws CloudioAttributeConstraintException {}
 
     /**
      * Call this method every time an endpoint tries to set the value of a static attribute. If the attribute
