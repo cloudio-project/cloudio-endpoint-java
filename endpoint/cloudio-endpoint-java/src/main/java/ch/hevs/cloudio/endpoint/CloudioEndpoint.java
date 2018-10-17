@@ -378,6 +378,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MQTT_CONNECT_RETRY_DEFAULT      = "10";
         private static final String MQTT_KEEPALIVE_INTERVAL_PROPERTY= "ch.hevs.cloudio.endpoint.keepAliveInterval";
         private static final String MQTT_KEEPALIVE_INTERVAL_DEFAULT = "60";
+        private static final String MQTT_MAXINFLIGHT_PROPERTY		= "ch.hevs.cloudio.endpoint.maxInFlight";
+        private static final String MQTT_MAXINFLIGHT_DEFAULT		= "1000";
         private static final String MQTT_PERSISTENCE_MEMORY         = "memory";
         private static final String MQTT_PERSISTENCE_FILE           = "file";
         private static final String MQTT_PERSISTENCE_NONE           = "none";
@@ -512,6 +514,16 @@ public class CloudioEndpoint implements CloudioEndpointService {
                         "(ch.hevs.cloudio.endpoint.keepAliveInterval), " +
                         "must be a valid integer number");
             }
+            
+            // Get the maxInFlight property.
+            try {
+                options.setMaxInflight(Integer.parseInt(
+                    configuration.getProperty(MQTT_MAXINFLIGHT_PROPERTY, MQTT_MAXINFLIGHT_DEFAULT)));
+            } catch (NumberFormatException exception) {
+                throw new InvalidPropertyException("Invalid max in flight messages" +
+                        "(ch.hevs.cloudio.endpoint.maxInFlight), " +
+                        "must be a valid integer number");
+            }
 
             // Create persistence object.
             String persistenceProvider = configuration.getProperty(MQTT_PERSISTENCE_PROPERTY, MQTT_PERSISTENCE_DEFAULT);
@@ -529,6 +541,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
             // Last will is a message with the UUID of the endpoint and no payload.
             options.setWill("@offline/" + uuid, new byte[0], 1, false);
+
 
             // Create the MQTT client.
             try {
