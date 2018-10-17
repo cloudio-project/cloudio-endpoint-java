@@ -520,8 +520,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 options.setMaxInflight(Integer.parseInt(
                     configuration.getProperty(MQTT_MAXINFLIGHT_PROPERTY, MQTT_MAXINFLIGHT_DEFAULT)));
             } catch (NumberFormatException exception) {
-                throw new InvalidPropertyException("Invalid keep alive interval " +
-                        "(ch.hevs.cloudio.endpoint.keepAliveInterval), " +
+                throw new InvalidPropertyException("Invalid max in flight messages" +
+                        "(ch.hevs.cloudio.endpoint.maxInFlight), " +
                         "must be a valid integer number");
             }
 
