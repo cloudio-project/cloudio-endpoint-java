@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'maven'
     id 'maven-publish'
+    id "com.jfrog.bintray" version "1.8.4"
 }
 
 sourceCompatibility = 1.7
@@ -48,4 +49,24 @@ publishing {
             artifact javadocJar
         }
     }
+}
+
+bintray {
+    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
+    key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
+    configurations = ['archives']
+    pkg {
+        repo = 'clients'
+        name = project.group + ':' + project.name
+        userOrg = 'cloudio-project'
+        desc= 'cloud.iO Java endpoint library/client'
+        websiteUrl = 'http://cloudio.hevs.ch'
+        issueTrackerUrl = 'https://github.com/cloudio-project/cloudio/issues'
+        vcsUrl = 'https://github.com/cloudio-project/cloudio'
+        licenses = ['MIT']
+        version {
+            name = project.version
+        }
+    }
+    publications = ['mavenJava', 'mavenSources', 'mavenJavadoc']
 }
