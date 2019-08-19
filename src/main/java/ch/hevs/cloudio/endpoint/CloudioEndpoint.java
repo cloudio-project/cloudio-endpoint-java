@@ -568,7 +568,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             boolean messageSend = false;
             if (mqtt.isConnected()) {
                 try {
-                    mqtt.publish("@update/" + attribute.getUuid().toString(), data, 1, false);
+                    mqtt.publish("@update/" + attribute.getUuid().toString(), data, 1, true);
                     messageSend = true;
                 } catch (MqttException exception) {
                     log.error("Exception :" + exception.getMessage());
@@ -704,7 +704,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                         // Try to send the update to the broker and remove it from the storage.
                                                         try {
                                                             mqtt.publish("@update/" + uuid,
-                                                                pendingUpdate.getHeaderBytes(), 1, false);
+                                                                pendingUpdate.getHeaderBytes(), 1, true);
                                                             persistence.remove(key);
                                                         } catch (MqttException exception) {
                                                             log.error("Exception: " + exception.getMessage());

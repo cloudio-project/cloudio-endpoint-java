@@ -84,23 +84,23 @@ class TopicUuid implements Uuid {
     private static String getObjectContainerTopic(final CloudioObjectContainer objectContainer) {
         CloudioObjectContainer parentObjectContainer = objectContainer.getParentObjectContainer();
         if (parentObjectContainer != null) {
-            return getObjectContainerTopic(parentObjectContainer) + "/objects/" + objectContainer.getName();
+            return getObjectContainerTopic(parentObjectContainer) + "/" + objectContainer.getName();
         }
 
         CloudioNodeContainer parentNodeContainer = objectContainer.getParentNodeContainer();
         if (parentNodeContainer != null) {
-            return getNodeContainerTopic(parentNodeContainer) + "/nodes/" + objectContainer.getName();
+            return getNodeContainerTopic(parentNodeContainer) + "/" + objectContainer.getName();
         }
 
         return null;
     }
 
     private static String getAttributeContainerTopic(final CloudioAttributeContainer attributeContainer) {
-        return getObjectContainerTopic(attributeContainer.getParentObjectContainer()) + "/objects/" +
+        return getObjectContainerTopic(attributeContainer.getParentObjectContainer()) + "/" +
                 attributeContainer.getName();
     }
 
     private static String getAttributeTopic(final CloudioAttribute.InternalAttribute attribute) {
-        return getAttributeContainerTopic(attribute.getParent()) + "/attributes/" + attribute.getName();
+        return getAttributeContainerTopic(attribute.getParent()) + "/" + attribute.getName();
     }
 }
