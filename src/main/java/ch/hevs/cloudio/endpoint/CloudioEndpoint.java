@@ -402,6 +402,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MESSAGE_FORMAT_DEFAULT          = "json";
         private static final String MQTT_CLEAN_SESSION_PROPERTY     = "ch.hevs.cloudio.endpoint.cleanSession";
         private static final String MQTT_CLEAN_SESSION_DEFAULT      = "false";
+        private static final String ENDPOINT_JOBS_SCRIPT_FOLDER     = "ch.hevs.cloudio.endpoint.jobs.folder";
 
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
@@ -412,6 +413,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private final MqttClientPersistence persistence;
         private final CloudioMessageFormat messageFormat;
         private final List<CloudioEndpointListener> listeners = new LinkedList<CloudioEndpointListener>();
+        private String jobsFilePath;
 
         public InternalEndpoint(String uuid, CloudioEndpointConfiguration configuration, CloudioEndpointListener listener)
                 throws InvalidUuidException, InvalidPropertyException, CloudioEndpointInitializationException {
@@ -554,6 +556,14 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 throw new CloudioEndpointInitializationException(exception);
             }
 
+            //Get folder path for Jobs.
+            if (configuration.containsKey(ENDPOINT_JOBS_SCRIPT_FOLDER)) {
+                jobsFilePath = configuration.getProperty(ENDPOINT_JOBS_SCRIPT_FOLDER);
+            } else {
+                jobsFilePath = "etc/cloud.io";
+            }
+
+
             // Start the connection process in a detached thread.
             new Thread(this).start();
         }
@@ -649,7 +659,19 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 if ("@set".equals(action)) {
                     location.pop();
                     set(topic, location, messageFormat, data);
-                } else {
+                }
+                else if("@exec".equals(action)){
+                    System.out.println(data);
+
+                    JobsParameter jobsParameter = new JobsParameter();
+
+                    messageFormat.deserializeJobsParameter(data, jobsParameter);
+
+                    JobsManager.getInstance().executeJob(jobsParameter.getJobURI(),jobsFilePath
+                            , jobsParameter.getGetOuput(), internal.mqtt, internal.uuid);
+
+                }
+                else {
                     log.error("Method \"" + location.pop() + "\" not supported!");
                 }
             } catch (Exception exception) {
@@ -682,6 +704,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                                 // Subscribe to all set commands.
                                 mqtt.subscribe("@set/" + internal.uuid + "/#", 1);
+                                // Subscribe to all exec.
+                                mqtt.subscribe("@exec/" + internal.uuid , 1);
 
                                 // Send all saved updates on update topic.
                                 if (persistence != null) {

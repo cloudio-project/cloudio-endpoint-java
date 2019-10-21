@@ -39,4 +39,8 @@ interface CloudioMessageFormat {
      */
     void deserializeAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
         throws Exception;
+
+
+    void deserializeJobsParameter(byte[] data, JobsParameter jobsParameter)
+            throws Exception;
 }

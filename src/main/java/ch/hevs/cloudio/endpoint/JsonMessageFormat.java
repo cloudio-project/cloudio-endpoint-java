@@ -118,6 +118,28 @@ class JsonMessageFormat implements CloudioMessageFormat {
         }
     }
 
+    @Override
+    public void deserializeJobsParameter(byte[] data, JobsParameter jobsParameter) throws Exception {
+        JsonParser parser = new JsonFactory().createParser(data);
+        if (parser.nextToken() == JsonToken.START_OBJECT) {
+            String jobURI;
+            Boolean getOutput;
+
+            while (parser.nextToken() != JsonToken.END_OBJECT) {
+                String fieldName = parser.getCurrentName();
+                parser.nextToken();
+                if ("jobURI".equals(fieldName)) {
+                    jobURI = parser.getText();
+                    jobsParameter.setJobURI(jobURI);
+                } else if ("getOutput".equals(fieldName)) {
+                    getOutput = parser.getBooleanValue();
+                    jobsParameter.setGetOuput(getOutput);
+                }
+            }
+        }
+
+    }
+
     private void serializeNode(CloudioNode.InternalNode node, JsonGenerator generator) throws IOException {
         generator.writeStartObject();
 
