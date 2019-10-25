@@ -1,6 +1,9 @@
 package ch.hevs.cloudio.endpoint;
 
 import ch.hevs.utils.ResourceLoader;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
@@ -563,6 +566,11 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 jobsFilePath = "etc/cloud.io";
             }
 
+            //Give the mqtt object to the appender
+            org.apache.logging.log4j.core.Logger coreLogger =
+                    (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
+            CloudioLogAppender mapAppender = (CloudioLogAppender) coreLogger.getAppenders().get("CloudioLogAppender");
+            mapAppender.setAppenderMqttParameters(mqtt, uuid, messageFormat);
 
             // Start the connection process in a detached thread.
             new Thread(this).start();
@@ -661,8 +669,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     set(topic, location, messageFormat, data);
                 }
                 else if("@exec".equals(action)){
-                    System.out.println(data);
-
                     JobsParameter jobsParameter = new JobsParameter();
 
                     messageFormat.deserializeJobsParameter(data, jobsParameter);
@@ -670,6 +676,26 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     JobsManager.getInstance().executeJob(jobsParameter.getJobURI(),jobsFilePath
                             , jobsParameter.getGetOuput(), internal.mqtt, internal.uuid);
 
+                }
+                else if("@logsLevel".equals(action)){
+                    System.out.println("loglevel set");
+                    LogParameter logParameter = new LogParameter();
+
+                    messageFormat.deserializeLogParameter(data, logParameter);
+
+                    try{
+                        Level log4jLevel = Level.getLevel(logParameter.getLevel());
+                        System.out.println(log4jLevel.toString());
+                        Configurator.setRootLevel(log4jLevel);
+                    }catch (Exception e){
+                        log.error("Level \"" + logParameter.getLevel() + "\" not supported!");
+                        e.printStackTrace();
+                        //}
+                    }
+                }
+                else if("@logsLevelUnRetained".equals(action)){
+                    mqtt.publish(topic.replace("UnRetained",""), data, 1, true);
+                    System.out.println("loglevel send with retain");
                 }
                 else {
                     log.error("Method \"" + location.pop() + "\" not supported!");
@@ -706,6 +732,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                 mqtt.subscribe("@set/" + internal.uuid + "/#", 1);
                                 // Subscribe to all exec.
                                 mqtt.subscribe("@exec/" + internal.uuid , 1);
+                                // Subscribe to all logsLevel
+                                mqtt.subscribe("@logsLevel/" + internal.uuid , 1);
+                                mqtt.subscribe("@logsLevelUnRetained/" + internal.uuid , 1);
 
                                 // Send all saved updates on update topic.
                                 if (persistence != null) {

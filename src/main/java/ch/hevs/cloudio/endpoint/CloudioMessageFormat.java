@@ -43,4 +43,9 @@ interface CloudioMessageFormat {
 
     void deserializeJobsParameter(byte[] data, JobsParameter jobsParameter)
             throws Exception;
+
+    void deserializeLogParameter(byte[] data, LogParameter logParameter)
+            throws Exception;
+
+    byte[] serializeCloudioLog(CloudioLog cloudioLog);
 }

@@ -42,6 +42,38 @@ class JsonZipMessageFormat extends JsonMessageFormat {
         }
     }
 
+
+    @Override
+    public void deserializeJobsParameter(byte[] data, JobsParameter jobsParameter)
+            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+        try {
+            super.deserializeJobsParameter(decompress(Arrays.copyOfRange(data, 1, data.length)), jobsParameter);
+        } catch (DataFormatException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+
+    }
+
+    @Override
+    public void deserializeLogParameter(byte[] data, LogParameter logParameter)
+            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+        try {
+            super.deserializeLogParameter(decompress(Arrays.copyOfRange(data, 1, data.length)), logParameter);
+        } catch (DataFormatException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+
+    }
+
+
+    @Override
+    public byte[] serializeCloudioLog(CloudioLog cloudioLog){
+        return compress(super.serializeCloudioLog(cloudioLog));
+    }
+
+
     private static byte[] compress(final byte[] uncompressed) {
         byte[] compressed = new byte[uncompressed.length];
         Deflater deflater = new Deflater(9);

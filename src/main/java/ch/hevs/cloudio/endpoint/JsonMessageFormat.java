@@ -119,7 +119,8 @@ class JsonMessageFormat implements CloudioMessageFormat {
     }
 
     @Override
-    public void deserializeJobsParameter(byte[] data, JobsParameter jobsParameter) throws Exception {
+    public void deserializeJobsParameter(byte[] data, JobsParameter jobsParameter)
+            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
         JsonParser parser = new JsonFactory().createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
             String jobURI;
@@ -138,6 +139,37 @@ class JsonMessageFormat implements CloudioMessageFormat {
             }
         }
 
+    }
+
+    @Override
+    public void deserializeLogParameter(byte[] data, LogParameter logParameter)
+            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+        JsonParser parser = new JsonFactory().createParser(data);
+        if (parser.nextToken() == JsonToken.START_OBJECT) {
+            String level;
+            while (parser.nextToken() != JsonToken.END_OBJECT) {
+                String fieldName = parser.getCurrentName();
+                parser.nextToken();
+                if ("level".equals(fieldName)) {
+                    level = parser.getText();
+                    logParameter.setLevel(level);
+                }
+            }
+        }
+    }
+
+    @Override
+    public byte[] serializeCloudioLog(CloudioLog cloudioLog) {
+        ByteArrayBuilder outputStream = new ByteArrayBuilder();
+        try {
+            JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
+            serializeCloudioLog(cloudioLog, generator);
+            generator.flush();
+        } catch (IOException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+        return outputStream.toByteArray();
     }
 
     private void serializeNode(CloudioNode.InternalNode node, JsonGenerator generator) throws IOException {
@@ -204,6 +236,23 @@ class JsonMessageFormat implements CloudioMessageFormat {
         if (value != null) {
             generator.writeObjectField("value", attribute.getValue());
         }
+
+        generator.writeEndObject();
+    }
+
+    private void serializeCloudioLog(CloudioLog cloudioLog, JsonGenerator generator) throws IOException {
+        generator.writeStartObject();
+
+        generator.writeStringField("level", cloudioLog.getLevel().toString());
+
+        generator.writeNumberField("timestamp", cloudioLog.getTimestamp() / 1000.0);
+
+        generator.writeStringField("message", cloudioLog.getMessage());
+
+        generator.writeStringField("loggerName", cloudioLog.getLoggerName());
+
+        generator.writeStringField("logSource", cloudioLog.getLogSource());
+
 
         generator.writeEndObject();
     }

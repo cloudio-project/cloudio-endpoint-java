@@ -1,6 +1,5 @@
 package ch.hevs.cloudio.endpoint;
 
-import ch.hevs.utils.ResourceLoader;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.slf4j.Logger;
