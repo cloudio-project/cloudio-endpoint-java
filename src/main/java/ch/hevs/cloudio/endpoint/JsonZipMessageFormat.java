@@ -1,7 +1,7 @@
 package ch.hevs.cloudio.endpoint;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -14,7 +14,7 @@ import java.util.zip.Inflater;
  * for this format 0x7A ('z' character).
  */
 class JsonZipMessageFormat extends JsonMessageFormat {
-    private static final Logger log = LoggerFactory.getLogger(JsonZipMessageFormat.class);
+    private static final Logger log = LogManager.getLogger(JsonZipMessageFormat.class);
 
     @Override
     public byte[] serializeEndpoint(CloudioEndpoint.InternalEndpoint endpoint) {
@@ -52,7 +52,6 @@ class JsonZipMessageFormat extends JsonMessageFormat {
             log.error("Exception: " + exception.getMessage());
             exception.printStackTrace();
         }
-
     }
 
     @Override
@@ -64,15 +63,17 @@ class JsonZipMessageFormat extends JsonMessageFormat {
             log.error("Exception: " + exception.getMessage());
             exception.printStackTrace();
         }
-
     }
-
 
     @Override
-    public byte[] serializeCloudioLog(CloudioLog cloudioLog){
-        return compress(super.serializeCloudioLog(cloudioLog));
+    public byte[] serializeCloudioLog(CloudioLogMessage cloudioLogMessage){
+        return compress(super.serializeCloudioLog(cloudioLogMessage));
     }
 
+    @Override
+    public byte[] serializeJobsLineOutput(JobsLineOutput jobsLineOutput){
+        return compress(super.serializeJobsLineOutput(jobsLineOutput));
+    }
 
     private static byte[] compress(final byte[] uncompressed) {
         byte[] compressed = new byte[uncompressed.length];

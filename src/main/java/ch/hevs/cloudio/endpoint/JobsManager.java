@@ -1,9 +1,9 @@
 package ch.hevs.cloudio.endpoint;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -13,7 +13,7 @@ import java.util.List;
 
 public class JobsManager {
 
-    private static final Logger log = LoggerFactory.getLogger(JobsManager.class);
+    private static final Logger log = LogManager.getLogger(JobsManager.class);
 
     private enum CmdJobs{
         listJobs;
@@ -41,17 +41,20 @@ public class JobsManager {
         return result;
     }
 
-    public void executeJob(String jobURI, String filePath, Boolean output, MqttAsyncClient mqtt, String uuid){
+    public void executeJob(String jobURI, String filePath, String correlationID, Boolean output, MqttAsyncClient mqtt, CloudioMessageFormat messageFormat, String uuid){
         ProcessBuilder processBuilder = new ProcessBuilder();
 
-        String scheme = jobURI.split("://")[0];
-        String job = jobURI.split("://")[1];
+        String[] splitJobUri = jobURI.split("://");
+        String scheme = splitJobUri[0];
+        String job = splitJobUri[1];
+
+        byte[] data;
 
         switch (scheme) {
             case "file":
 
                 if (!listScripts(filePath).isEmpty() && listScripts(filePath).contains(job)){
-                    processBuilder.command("bash", "-c", "sh " + filePath + "/" + job);
+                    processBuilder.command("$SHELL", filePath + "/" + job);
 
                     try {
 
@@ -65,11 +68,13 @@ public class JobsManager {
 
                         String line;
                         while ((line = reader.readLine()) != null) {
-                            mqtt.publish("@execOutput/" + uuid, line.getBytes(), 1, false);
+                            data = messageFormat.serializeJobsLineOutput(
+                                    new JobsLineOutput(line, correlationID));
+                            mqtt.publish("@execOutput/" + uuid, data, 1, false);
                         }
 
                         int exitCode = process.waitFor();
-                        System.out.println("\nExited with error code : " + exitCode);
+                        log.error("Exited "+jobURI+" with error code : " + exitCode);
 
                     } catch (MqttException exception) {
                         log.error("Exception: " + exception.getMessage());
@@ -80,7 +85,9 @@ public class JobsManager {
                 }else
                 {
                     try {
-                        mqtt.publish("@execOutput/" + uuid, ("file uri:" + jobURI + " contain invalid file").getBytes(), 1, false);
+                        data = messageFormat.serializeJobsLineOutput(
+                                new JobsLineOutput("file uri:" + jobURI + " contain invalid file", correlationID));
+                        mqtt.publish("@execOutput/" + uuid, data, 1, false);
                     } catch (MqttException exception) {
                         log.error("Exception: " + exception.getMessage());
                         exception.printStackTrace();
@@ -89,22 +96,29 @@ public class JobsManager {
                 break;
             case "cmd":
                 try {
-                    System.out.println(job);
                     CmdJobs cmdJobs = CmdJobs.valueOf(job);
                     switch (cmdJobs){
                         case listJobs:
                             List<String> files = JobsManager.getInstance().listScripts(filePath);
                             try {
-                                mqtt.publish("@execOutput/" + uuid, "List of jobs available as jobURI \"cmd://commandName\":".getBytes(), 1, false);
+                                data = messageFormat.serializeJobsLineOutput(
+                                        new JobsLineOutput("List of jobs available as jobURI \"cmd://commandName\":", correlationID));
+                                mqtt.publish("@execOutput/" + uuid, data, 1, false);
                                 for(CmdJobs cmd : CmdJobs.values())
                                 {
-                                    mqtt.publish("@execOutput/" + uuid,("\t"+cmd.name()).getBytes(), 1, false);
+                                    data = messageFormat.serializeJobsLineOutput(
+                                            new JobsLineOutput("\t"+cmd.name(), correlationID));
+                                    mqtt.publish("@execOutput/" + uuid,data , 1, false);
                                 }
 
-                                mqtt.publish("@execOutput/" + uuid, "List of jobs available as jobURI \"file://fileName\":".getBytes(), 1, false);
+                                data = messageFormat.serializeJobsLineOutput(
+                                        new JobsLineOutput("List of jobs available as jobURI \"file://fileName\":", correlationID));
+                                mqtt.publish("@execOutput/" + uuid, data, 1, false);
                                 for(String file : files)
                                 {
-                                    mqtt.publish("@execOutput/" + uuid,("\t"+file).getBytes(), 1, false);
+                                    data = messageFormat.serializeJobsLineOutput(
+                                            new JobsLineOutput("\t"+file, correlationID));
+                                    mqtt.publish("@execOutput/" + uuid, data, 1, false);
 
                                 }
                             } catch (MqttException exception) {
@@ -120,7 +134,9 @@ public class JobsManager {
                 catch (IllegalArgumentException e)
                 {
                     try {
-                        mqtt.publish("@execOutput/" + uuid, ("cmd uri:" + jobURI + " not supported").getBytes(), 1, false);
+                        data = messageFormat.serializeJobsLineOutput(
+                                new JobsLineOutput("cmd uri:" + jobURI + " not supported", correlationID));
+                        mqtt.publish("@execOutput/" + uuid, data, 1, false);
                     } catch (MqttException exception) {
                         log.error("Exception: " + exception.getMessage());
                         exception.printStackTrace();
@@ -130,7 +146,9 @@ public class JobsManager {
                 break;
             default:
                 try {
-                    mqtt.publish("@execOutput/" + uuid, ("uri:" + jobURI + " not supported").getBytes(), 1, false);
+                    data = messageFormat.serializeJobsLineOutput(
+                            new JobsLineOutput("uri:" + jobURI + " not supported", correlationID));
+                    mqtt.publish("@execOutput/" + uuid, data, 1, false);
                 } catch (MqttException exception) {
                     log.error("Exception: " + exception.getMessage());
                     exception.printStackTrace();

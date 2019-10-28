@@ -46,7 +46,7 @@ public class CloudioLogAppender extends AbstractAppender {
             else
                 loggerName = event.getLoggerName();
 
-            CloudioLog cloudioLog = new CloudioLog(
+            CloudioLogMessage cloudioLogMessage = new CloudioLogMessage(
                     event.getLevel().toString(),
                     (double)event.getTimeMillis(),
                     event.getMessage().getFormattedMessage(),
@@ -57,7 +57,7 @@ public class CloudioLogAppender extends AbstractAppender {
             );
             try{
             mqtt.publish("@logs/" + uuid,
-                    messageFormat.serializeCloudioLog(cloudioLog), 1, false);
+                    messageFormat.serializeCloudioLog(cloudioLogMessage), 1, false);
             }
             catch (MqttException exception){
                 exception.printStackTrace();

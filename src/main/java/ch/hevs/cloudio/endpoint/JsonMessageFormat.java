@@ -2,8 +2,8 @@ package ch.hevs.cloudio.endpoint;
 
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.core.util.ByteArrayBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.List;
@@ -14,7 +14,7 @@ import java.util.Set;
  * format 0x7B ('{' character).
  */
 class JsonMessageFormat implements CloudioMessageFormat {
-    private static final Logger log = LoggerFactory.getLogger(JsonMessageFormat.class);
+    private static final Logger log = LogManager.getLogger(JsonMessageFormat.class);
     private final JsonFactory factory = new JsonFactory();
 
     @Override
@@ -124,7 +124,8 @@ class JsonMessageFormat implements CloudioMessageFormat {
         JsonParser parser = new JsonFactory().createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
             String jobURI;
-            Boolean getOutput;
+            String correlationID;
+            Boolean sendOutput;
 
             while (parser.nextToken() != JsonToken.END_OBJECT) {
                 String fieldName = parser.getCurrentName();
@@ -132,9 +133,12 @@ class JsonMessageFormat implements CloudioMessageFormat {
                 if ("jobURI".equals(fieldName)) {
                     jobURI = parser.getText();
                     jobsParameter.setJobURI(jobURI);
-                } else if ("getOutput".equals(fieldName)) {
-                    getOutput = parser.getBooleanValue();
-                    jobsParameter.setGetOuput(getOutput);
+                } else if ("sendOutput".equals(fieldName)) {
+                    sendOutput = parser.getBooleanValue();
+                    jobsParameter.setSendOutput(sendOutput);
+                } else if ("correlationID".equals(fieldName)) {
+                    correlationID = parser.getText();
+                    jobsParameter.setCorrelationID(correlationID);
                 }
             }
         }
@@ -159,11 +163,25 @@ class JsonMessageFormat implements CloudioMessageFormat {
     }
 
     @Override
-    public byte[] serializeCloudioLog(CloudioLog cloudioLog) {
+    public byte[] serializeCloudioLog(CloudioLogMessage cloudioLogMessage) {
         ByteArrayBuilder outputStream = new ByteArrayBuilder();
         try {
             JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
-            serializeCloudioLog(cloudioLog, generator);
+            serializeCloudioLog(cloudioLogMessage, generator);
+            generator.flush();
+        } catch (IOException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+        return outputStream.toByteArray();
+    }
+
+    @Override
+    public byte[] serializeJobsLineOutput(JobsLineOutput jobsLineOutput) {
+        ByteArrayBuilder outputStream = new ByteArrayBuilder();
+        try {
+            JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
+            serializeJobsLineOutput(jobsLineOutput, generator);
             generator.flush();
         } catch (IOException exception) {
             log.error("Exception: " + exception.getMessage());
@@ -240,19 +258,23 @@ class JsonMessageFormat implements CloudioMessageFormat {
         generator.writeEndObject();
     }
 
-    private void serializeCloudioLog(CloudioLog cloudioLog, JsonGenerator generator) throws IOException {
+    private void serializeCloudioLog(CloudioLogMessage cloudioLogMessage, JsonGenerator generator) throws IOException {
         generator.writeStartObject();
 
-        generator.writeStringField("level", cloudioLog.getLevel().toString());
+        generator.writeStringField("level", cloudioLogMessage.getLevel().toString());
+        generator.writeNumberField("timestamp", cloudioLogMessage.getTimestamp() / 1000.0);
+        generator.writeStringField("message", cloudioLogMessage.getMessage());
+        generator.writeStringField("loggerName", cloudioLogMessage.getLoggerName());
+        generator.writeStringField("logSource", cloudioLogMessage.getLogSource());
 
-        generator.writeNumberField("timestamp", cloudioLog.getTimestamp() / 1000.0);
+        generator.writeEndObject();
+    }
 
-        generator.writeStringField("message", cloudioLog.getMessage());
+    private void serializeJobsLineOutput(JobsLineOutput jobsLineOutput, JsonGenerator generator) throws IOException {
+        generator.writeStartObject();
 
-        generator.writeStringField("loggerName", cloudioLog.getLoggerName());
-
-        generator.writeStringField("logSource", cloudioLog.getLogSource());
-
+        generator.writeStringField("correlationID", jobsLineOutput.getCorrelationID());
+        generator.writeStringField("data", jobsLineOutput.getData());
 
         generator.writeEndObject();
     }

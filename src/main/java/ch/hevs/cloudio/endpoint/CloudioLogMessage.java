@@ -1,6 +1,6 @@
 package ch.hevs.cloudio.endpoint;
 
-class CloudioLog{
+class CloudioLogMessage {
 
     private String level;
     private Double timestamp ;
@@ -8,7 +8,7 @@ class CloudioLog{
     private String loggerName;
     private String logSource;
 
-    public CloudioLog(String level, Double timestamp, String message, String loggerName, String logSource){
+    public CloudioLogMessage(String level, Double timestamp, String message, String loggerName, String logSource){
         this.level = level;
         this.timestamp = timestamp;
         this.message = message;
