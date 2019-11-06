@@ -56,8 +56,8 @@ public class CloudioLogAppender extends AbstractAppender {
                             ", line:"+event.getSource().getLineNumber()
             );
             try{
-            mqtt.publish("@logs/" + uuid,
-                    messageFormat.serializeCloudioLog(cloudioLogMessage), 1, false);
+                mqtt.publish("@logs/" + uuid,
+                        messageFormat.serializeCloudioLog(cloudioLogMessage), 1, false);
             }
             catch (MqttException exception){
                 exception.printStackTrace();

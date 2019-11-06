@@ -1,6 +1,7 @@
 package ch.hevs.cloudio.endpoint;
 
 import ch.hevs.utils.ResourceLoader;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,6 +14,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
+import java.io.File;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.util.*;
@@ -416,6 +418,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private final CloudioMessageFormat messageFormat;
         private final List<CloudioEndpointListener> listeners = new LinkedList<CloudioEndpointListener>();
         private String jobsFilePath;
+        private CloudioPersistentData cloudioPersistentData;
+        private File cloudioPersistentDataPath;
 
         public InternalEndpoint(String uuid, CloudioEndpointConfiguration configuration, CloudioEndpointListener listener)
                 throws InvalidUuidException, InvalidPropertyException, CloudioEndpointInitializationException {
@@ -565,6 +569,27 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 jobsFilePath = "etc/cloud.io";
             }
 
+            //Initialize the cloudioPersistentData file
+            ObjectMapper objectMapper = new ObjectMapper();
+            String homePath = System.getProperty("user.home");
+            cloudioPersistentDataPath = new File(homePath+"/.config/cloudio/CloudioPersistentData.json");
+            try {
+                //if file doesn't exist, create it and initialize it
+                if(!cloudioPersistentDataPath.exists()){
+                    new File(homePath+"/.config/cloudio").mkdir();
+                    cloudioPersistentDataPath.createNewFile();
+                    cloudioPersistentData = new CloudioPersistentData("DEBUG");
+                    objectMapper.writeValue(cloudioPersistentDataPath, cloudioPersistentData);
+                }else {
+                    cloudioPersistentData = objectMapper.readValue(cloudioPersistentDataPath, CloudioPersistentData.class);
+                    Level log4jLevel = Level.getLevel(cloudioPersistentData.getLevel());
+                    Configurator.setRootLevel(log4jLevel);
+                }
+
+            }catch(Exception exception){
+                throw new CloudioEndpointInitializationException(exception);
+            }
+
             //Create the CloudioLogAppender and give the mqtt object to it
             org.apache.logging.log4j.core.Logger coreLogger =
                     (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
@@ -687,16 +712,15 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                     try{
                         Level log4jLevel = Level.getLevel(logParameter.getLevel());
-                        log.trace("loglevel set at "+log4jLevel.toString());
                         Configurator.setRootLevel(log4jLevel);
+                        cloudioPersistentData.setLevel(log4jLevel.toString());
+
+                        ObjectMapper objectMapper = new ObjectMapper();
+                        objectMapper.writeValue(cloudioPersistentDataPath, cloudioPersistentData);
                     }catch (Exception e){
                         log.error("Level \"" + logParameter.getLevel() + "\" not supported!");
                         e.printStackTrace();
-                        //}
                     }
-                }
-                else if("@logsLevelUnRetained".equals(action)){
-                    mqtt.publish(topic.replace("UnRetained",""), data, 1, true);
                 }
                 else {
                     log.error("Method \"" + location.pop() + "\" not supported!");
@@ -735,7 +759,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                 mqtt.subscribe("@exec/" + internal.uuid , 1);
                                 // Subscribe to all logsLevel
                                 mqtt.subscribe("@logsLevel/" + internal.uuid , 1);
-                                mqtt.subscribe("@logsLevelUnRetained/" + internal.uuid , 1);
 
                                 // Send all saved updates on update topic.
                                 if (persistence != null) {
