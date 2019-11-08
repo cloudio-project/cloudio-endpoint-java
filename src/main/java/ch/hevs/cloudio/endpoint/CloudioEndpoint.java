@@ -1,7 +1,6 @@
 package ch.hevs.cloudio.endpoint;
 
 import ch.hevs.utils.ResourceLoader;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -9,15 +8,17 @@ import org.apache.logging.log4j.core.config.Configurator;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
-import java.io.File;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.util.*;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * An Endpoint is the root object of any connection of a device or a gateway to cloud.io. The parameters of the
@@ -408,6 +409,12 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MQTT_CLEAN_SESSION_DEFAULT      = "false";
         private static final String ENDPOINT_JOBS_SCRIPT_FOLDER     = "ch.hevs.cloudio.endpoint.jobs.folder";
 
+
+        /*** MapDB parameters******************************************************************************************/
+        private static final String PERSISTENCE_FILE                = "cloudiOPersistanceData.db";
+        private static final String PERSISTENCE_MAP_NAME            = "cloudioPersistenceData";
+        private static final String PERSISTENCE_LOG_LEVEL           = "logLevel";
+
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
         private final NamedItemSet<CloudioNode.InternalNode> nodes = new NamedItemSet<CloudioNode.InternalNode>();
@@ -418,8 +425,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private final CloudioMessageFormat messageFormat;
         private final List<CloudioEndpointListener> listeners = new LinkedList<CloudioEndpointListener>();
         private String jobsFilePath;
-        private CloudioPersistentData cloudioPersistentData;
-        private File cloudioPersistentDataPath;
 
         public InternalEndpoint(String uuid, CloudioEndpointConfiguration configuration, CloudioEndpointListener listener)
                 throws InvalidUuidException, InvalidPropertyException, CloudioEndpointInitializationException {
@@ -569,26 +574,18 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 jobsFilePath = "etc/cloud.io";
             }
 
-            //Initialize the cloudioPersistentData file
-            ObjectMapper objectMapper = new ObjectMapper();
-            String homePath = System.getProperty("user.home");
-            cloudioPersistentDataPath = new File(homePath+"/.config/cloudio/CloudioPersistentData.json");
-            try {
-                //if file doesn't exist, create it and initialize it
-                if(!cloudioPersistentDataPath.exists()){
-                    new File(homePath+"/.config/cloudio").mkdir();
-                    cloudioPersistentDataPath.createNewFile();
-                    cloudioPersistentData = new CloudioPersistentData("DEBUG");
-                    objectMapper.writeValue(cloudioPersistentDataPath, cloudioPersistentData);
-                }else {
-                    cloudioPersistentData = objectMapper.readValue(cloudioPersistentDataPath, CloudioPersistentData.class);
-                    Level log4jLevel = Level.getLevel(cloudioPersistentData.getLevel());
-                    Configurator.setRootLevel(log4jLevel);
-                }
-
-            }catch(Exception exception){
-                throw new CloudioEndpointInitializationException(exception);
+            //Initialize the cloud.iO persistence file
+            DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+            ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
+            String logLevel = (String)map.getOrDefault(PERSISTENCE_LOG_LEVEL,"");
+            if(logLevel.equals("")) {
+                map.put(PERSISTENCE_LOG_LEVEL, "DEBUG");
             }
+            else{
+                Level log4jLevel = Level.getLevel(logLevel);
+                Configurator.setRootLevel(log4jLevel);
+            }
+            dbPersistenceData.close();
 
             //Create the CloudioLogAppender and give the mqtt object to it
             org.apache.logging.log4j.core.Logger coreLogger =
@@ -713,10 +710,13 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     try{
                         Level log4jLevel = Level.getLevel(logParameter.getLevel());
                         Configurator.setRootLevel(log4jLevel);
-                        cloudioPersistentData.setLevel(log4jLevel.toString());
 
-                        ObjectMapper objectMapper = new ObjectMapper();
-                        objectMapper.writeValue(cloudioPersistentDataPath, cloudioPersistentData);
+                        //put loglevel in mapDB
+                        DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
+                        map.put(PERSISTENCE_LOG_LEVEL, logParameter.getLevel());
+                        dbPersistenceData.close();
+
                     }catch (Exception e){
                         log.error("Level \"" + logParameter.getLevel() + "\" not supported!");
                         e.printStackTrace();
