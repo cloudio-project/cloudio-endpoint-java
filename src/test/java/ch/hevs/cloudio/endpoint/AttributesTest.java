@@ -34,7 +34,7 @@ public class AttributesTest implements CloudioAttributeContainer, CloudioAttribu
         Assert.assertEquals(attribute.internal.getName(), "toto");
         Assert.assertSame(attribute.internal.getParent(), this);
         Assert.assertEquals(attribute.internal.getUuid().toString(),
-                "TEST/nodes/TEST/objects/TEST/attributes/toto");
+                "TEST/TEST/TEST/toto");
 
         expectedAttributeType = attribute.internal.getType();
         expectedAttributeConstraint = constraint;

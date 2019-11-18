@@ -1,7 +1,7 @@
 package ch.hevs.cloudio.endpoint;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -14,7 +14,7 @@ import java.util.zip.Inflater;
  * for this format 0x7A ('z' character).
  */
 class JsonZipMessageFormat extends JsonMessageFormat {
-    private static final Logger log = LoggerFactory.getLogger(JsonZipMessageFormat.class);
+    private static final Logger log = LogManager.getLogger(JsonZipMessageFormat.class);
 
     @Override
     public byte[] serializeEndpoint(CloudioEndpoint.InternalEndpoint endpoint) {
@@ -40,6 +40,39 @@ class JsonZipMessageFormat extends JsonMessageFormat {
             log.error("Exception: " + exception.getMessage());
             exception.printStackTrace();
         }
+    }
+
+
+    @Override
+    public void deserializeJobsParameter(byte[] data, JobsParameter jobsParameter)
+            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+        try {
+            super.deserializeJobsParameter(decompress(Arrays.copyOfRange(data, 1, data.length)), jobsParameter);
+        } catch (DataFormatException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+    }
+
+    @Override
+    public void deserializeLogParameter(byte[] data, LogParameter logParameter)
+            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+        try {
+            super.deserializeLogParameter(decompress(Arrays.copyOfRange(data, 1, data.length)), logParameter);
+        } catch (DataFormatException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+    }
+
+    @Override
+    public byte[] serializeCloudioLog(CloudioLogMessage cloudioLogMessage){
+        return compress(super.serializeCloudioLog(cloudioLogMessage));
+    }
+
+    @Override
+    public byte[] serializeJobsLineOutput(JobsLineOutput jobsLineOutput){
+        return compress(super.serializeJobsLineOutput(jobsLineOutput));
     }
 
     private static byte[] compress(final byte[] uncompressed) {

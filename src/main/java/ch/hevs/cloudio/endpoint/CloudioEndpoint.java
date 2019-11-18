@@ -1,11 +1,15 @@
 package ch.hevs.cloudio.endpoint;
 
 import ch.hevs.utils.ResourceLoader;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -14,6 +18,7 @@ import javax.net.ssl.TrustManagerFactory;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.util.*;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * An Endpoint is the root object of any connection of a device or a gateway to cloud.io. The parameters of the
@@ -168,7 +173,7 @@ import java.util.*;
  * </ul>
  */
 public class CloudioEndpoint implements CloudioEndpointService {
-    private static final Logger log = LoggerFactory.getLogger(CloudioEndpoint.class);
+    private static final Logger log = LogManager.getLogger(CloudioEndpoint.class);
     final InternalEndpoint internal;
 
     /**
@@ -402,6 +407,13 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MESSAGE_FORMAT_DEFAULT          = "json";
         private static final String MQTT_CLEAN_SESSION_PROPERTY     = "ch.hevs.cloudio.endpoint.cleanSession";
         private static final String MQTT_CLEAN_SESSION_DEFAULT      = "false";
+        private static final String ENDPOINT_JOBS_SCRIPT_FOLDER     = "ch.hevs.cloudio.endpoint.jobs.folder";
+
+
+        /*** MapDB parameters******************************************************************************************/
+        private static final String PERSISTENCE_FILE                = "cloudiOPersistanceData.db";
+        private static final String PERSISTENCE_MAP_NAME            = "cloudioPersistenceData";
+        private static final String PERSISTENCE_LOG_LEVEL           = "logLevel";
 
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
@@ -412,6 +424,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private final MqttClientPersistence persistence;
         private final CloudioMessageFormat messageFormat;
         private final List<CloudioEndpointListener> listeners = new LinkedList<CloudioEndpointListener>();
+        private String jobsFilePath;
 
         public InternalEndpoint(String uuid, CloudioEndpointConfiguration configuration, CloudioEndpointListener listener)
                 throws InvalidUuidException, InvalidPropertyException, CloudioEndpointInitializationException {
@@ -554,6 +567,36 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 throw new CloudioEndpointInitializationException(exception);
             }
 
+            //Get folder path for Jobs.
+            if (configuration.containsKey(ENDPOINT_JOBS_SCRIPT_FOLDER)) {
+                jobsFilePath = configuration.getProperty(ENDPOINT_JOBS_SCRIPT_FOLDER);
+            } else {
+                jobsFilePath = "etc/cloud.io";
+            }
+
+            //Initialize the cloud.iO persistence file
+            DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+            ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
+            String logLevel = (String)map.getOrDefault(PERSISTENCE_LOG_LEVEL,"");
+            if(logLevel.equals("")) {
+                map.put(PERSISTENCE_LOG_LEVEL, "DEBUG");
+            }
+            else{
+                Level log4jLevel = Level.getLevel(logLevel);
+                Configurator.setRootLevel(log4jLevel);
+            }
+            dbPersistenceData.close();
+
+            //Create the CloudioLogAppender and give the mqtt object to it
+            org.apache.logging.log4j.core.Logger coreLogger =
+                    (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
+
+            CloudioLogAppender cloudioLogAppender = new CloudioLogAppender("CloudioLogAppender", null);
+            cloudioLogAppender.setAppenderMqttParameters(mqtt, uuid, messageFormat);
+
+            coreLogger.addAppender(cloudioLogAppender);
+            cloudioLogAppender.start();
+
             // Start the connection process in a detached thread.
             new Thread(this).start();
         }
@@ -649,7 +692,37 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 if ("@set".equals(action)) {
                     location.pop();
                     set(topic, location, messageFormat, data);
-                } else {
+                }
+                else if("@exec".equals(action)){
+                    JobsParameter jobsParameter = new JobsParameter();
+
+                    messageFormat.deserializeJobsParameter(data, jobsParameter);
+
+                    JobsManager.getInstance().executeJob(jobsParameter.getJobURI(),jobsFilePath,
+                            jobsParameter.getCorrelationID(), jobsParameter.getSendOutput(),
+                            internal.mqtt, messageFormat, internal.uuid);
+
+                }
+                else if("@logsLevel".equals(action)){
+                    LogParameter logParameter = new LogParameter();
+                    messageFormat.deserializeLogParameter(data, logParameter);
+
+                    try{
+                        Level log4jLevel = Level.getLevel(logParameter.getLevel());
+                        Configurator.setRootLevel(log4jLevel);
+
+                        //put loglevel in mapDB
+                        DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
+                        map.put(PERSISTENCE_LOG_LEVEL, logParameter.getLevel());
+                        dbPersistenceData.close();
+
+                    }catch (Exception e){
+                        log.error("Level \"" + logParameter.getLevel() + "\" not supported!");
+                        e.printStackTrace();
+                    }
+                }
+                else {
                     log.error("Method \"" + location.pop() + "\" not supported!");
                 }
             } catch (Exception exception) {
@@ -682,6 +755,10 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                                 // Subscribe to all set commands.
                                 mqtt.subscribe("@set/" + internal.uuid + "/#", 1);
+                                // Subscribe to all exec.
+                                mqtt.subscribe("@exec/" + internal.uuid , 1);
+                                // Subscribe to all logsLevel
+                                mqtt.subscribe("@logsLevel/" + internal.uuid , 1);
 
                                 // Send all saved updates on update topic.
                                 if (persistence != null) {
