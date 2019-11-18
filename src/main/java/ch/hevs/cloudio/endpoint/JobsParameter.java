@@ -3,6 +3,7 @@ package ch.hevs.cloudio.endpoint;
 public class JobsParameter {
     private String jobURI;
     private String correlationID;
+    private String data = ""; //data is an optional field
     private boolean sendOutput;
 
     public boolean getSendOutput() {
@@ -27,5 +28,13 @@ public class JobsParameter {
 
     public void setJobURI(String jobURI) {
         this.jobURI = jobURI;
+    }
+
+    public String getData() {
+        return data;
+    }
+
+    public void setData(String data) {
+        this.data = data;
     }
 }

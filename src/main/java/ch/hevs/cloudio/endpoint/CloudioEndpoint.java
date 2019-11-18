@@ -199,7 +199,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
      *                                          parameters, invalid certificates or any other runtime errors.
      */
     public CloudioEndpoint(String uuid) throws InvalidUuidException, InvalidPropertyException,
-        CloudioEndpointInitializationException {
+            CloudioEndpointInitializationException {
         // Call internal designated constructor with empty properties reference.
         internal = new InternalEndpoint(uuid, null, null);
     }
@@ -253,7 +253,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
      *                                          parameters, invalid certificates or any other runtime errors.
      */
     CloudioEndpoint(String uuid, CloudioEndpointConfiguration configuration) throws InvalidUuidException, InvalidPropertyException,
-        CloudioEndpointInitializationException {
+            CloudioEndpointInitializationException {
         internal = new InternalEndpoint(uuid, configuration, null);
     }
 
@@ -271,7 +271,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         if (listener != null) {
             internal.listeners.add(listener);
         }
-     }
+    }
 
     @Override
     public void removeEndpointListener(CloudioEndpointListener listener) {
@@ -484,16 +484,16 @@ public class CloudioEndpoint implements CloudioEndpointService {
             // Get retry interval.
             try {
                 retryInterval = Integer.parseInt(configuration.getProperty(MQTT_CONNECT_RETRY_PROPERTY,
-                    MQTT_CONNECT_RETRY_DEFAULT));
+                        MQTT_CONNECT_RETRY_DEFAULT));
                 if (retryInterval <= 0) {
                     throw new InvalidPropertyException("Invalid connect retry interval " +
-                        "(ch.hevs.cloudio.endpoint.connectRetryInterval), " +
-                        "must be a greater than 0");
+                            "(ch.hevs.cloudio.endpoint.connectRetryInterval), " +
+                            "must be a greater than 0");
                 }
             } catch (NumberFormatException exception) {
                 throw new InvalidPropertyException("Invalid connect retry interval " +
-                    "(ch.hevs.cloudio.endpoint.connectRetryInterval), " +
-                    "must be a valid integer number");
+                        "(ch.hevs.cloudio.endpoint.connectRetryInterval), " +
+                        "must be a valid integer number");
             }
 
             // Do we start a clean session?
@@ -511,7 +511,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             // Get the connection timeout property.
             try {
                 options.setConnectionTimeout(Integer.parseInt(
-                    configuration.getProperty(MQTT_CONNECTION_TIMEOUT_PROPERTY, MQTT_CONNECTION_TIMEOUT_DEFAULT)));
+                        configuration.getProperty(MQTT_CONNECTION_TIMEOUT_PROPERTY, MQTT_CONNECTION_TIMEOUT_DEFAULT)));
             } catch (NumberFormatException e) {
                 throw new InvalidPropertyException("Invalid connect timeout " +
                         "(ch.hevs.cloudio.endpoint.connectTimeout), " +
@@ -521,17 +521,17 @@ public class CloudioEndpoint implements CloudioEndpointService {
             // Get the keep alive interval property.
             try {
                 options.setKeepAliveInterval(Integer.parseInt(
-                    configuration.getProperty(MQTT_KEEPALIVE_INTERVAL_PROPERTY, MQTT_KEEPALIVE_INTERVAL_DEFAULT)));
+                        configuration.getProperty(MQTT_KEEPALIVE_INTERVAL_PROPERTY, MQTT_KEEPALIVE_INTERVAL_DEFAULT)));
             } catch (NumberFormatException exception) {
                 throw new InvalidPropertyException("Invalid keep alive interval " +
                         "(ch.hevs.cloudio.endpoint.keepAliveInterval), " +
                         "must be a valid integer number");
             }
-            
+
             // Get the maxInFlight property.
             try {
                 options.setMaxInflight(Integer.parseInt(
-                    configuration.getProperty(MQTT_MAXINFLIGHT_PROPERTY, MQTT_MAXINFLIGHT_DEFAULT)));
+                        configuration.getProperty(MQTT_MAXINFLIGHT_PROPERTY, MQTT_MAXINFLIGHT_DEFAULT)));
             } catch (NumberFormatException exception) {
                 throw new InvalidPropertyException("Invalid max in flight messages" +
                         "(ch.hevs.cloudio.endpoint.maxInFlight), " +
@@ -624,8 +624,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
             if (!messageSend && persistence != null) {
                 try {
                     persistence.put("PendingUpdate-" + attribute.getUuid().toString().replace("/", ";")
-                            + "-" + Calendar.getInstance().getTimeInMillis(),
-                        new PendingUpdate(data));
+                                    + "-" + Calendar.getInstance().getTimeInMillis(),
+                            new PendingUpdate(data));
                 } catch (MqttPersistenceException exception) {
                     log.error("Exception :" + exception.getMessage());
                     exception.printStackTrace();
@@ -699,7 +699,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     messageFormat.deserializeJobsParameter(data, jobsParameter);
 
                     JobsManager.getInstance().executeJob(jobsParameter.getJobURI(),jobsFilePath,
-                            jobsParameter.getCorrelationID(), jobsParameter.getSendOutput(),
+                            jobsParameter.getCorrelationID(), jobsParameter.getSendOutput(), jobsParameter.getData(),
                             internal.mqtt, messageFormat, internal.uuid);
 
                 }
@@ -751,7 +751,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                             try {
                                 // Send birth message.
                                 mqtt.publish("@online/" + internal.uuid,
-                                    messageFormat.serializeEndpoint(InternalEndpoint.this), 1, true);
+                                        messageFormat.serializeEndpoint(InternalEndpoint.this), 1, true);
 
                                 // Subscribe to all set commands.
                                 mqtt.subscribe("@set/" + internal.uuid + "/#", 1);
@@ -781,7 +781,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                         // Try to send the update to the broker and remove it from the storage.
                                                         try {
                                                             mqtt.publish("@update/" + uuid,
-                                                                pendingUpdate.getHeaderBytes(), 1, true);
+                                                                    pendingUpdate.getHeaderBytes(), 1, true);
                                                             persistence.remove(key);
                                                         } catch (MqttException exception) {
                                                             log.error("Exception: " + exception.getMessage());
@@ -856,23 +856,23 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
         /*** Private methods ******************************************************************************************/
         private SSLSocketFactory createSocketFactory(String endpointUuid, CloudioEndpointConfiguration properties)
-            throws Exception {
+                throws Exception {
             // Endpoint identity (Key & Certificate) in single PKCS #12 archive file named with the actual Endpoint ID.
             KeyStore endpointKeyCertStore = KeyStore.getInstance(ENDPOINT_IDENTITY_FILE_TYPE);
 
             // If the key file is present in settings, use it to load the identity file.
             if (properties.containsKey(ENDPOINT_IDENTITY_FILE_PROPERTY)) {
                 endpointKeyCertStore.load(ResourceLoader.getResource(
-                                properties.getProperty(ENDPOINT_IDENTITY_FILE_PROPERTY), this),
+                        properties.getProperty(ENDPOINT_IDENTITY_FILE_PROPERTY), this),
                         properties.getProperty(ENDPOINT_IDENTITY_PASS_PROPERTY,
                                 ENDPOINT_IDENTITY_PASS_DEFAULT).toCharArray());
 
-            // If the key file is not given, try to load from default locations.
+                // If the key file is not given, try to load from default locations.
             } else {
                 endpointKeyCertStore.load(ResourceLoader.getResourceFromLocations(endpointUuid + ".p12", this,
-                                "home:" + "/.config/cloud.io/",
-                                "file:/etc/cloud.io/",
-                                "classpath:cloud.io/"),
+                        "home:" + "/.config/cloud.io/",
+                        "file:/etc/cloud.io/",
+                        "classpath:cloud.io/"),
                         properties.getProperty(ENDPOINT_IDENTITY_PASS_PROPERTY,
                                 ENDPOINT_IDENTITY_PASS_DEFAULT).toCharArray());
             }
@@ -887,13 +887,13 @@ public class CloudioEndpoint implements CloudioEndpointService {
             if (properties.containsKey(CERT_AUTHORITY_FILE_PROPERTY)) {
                 authorityKeyStore.load(ResourceLoader.getResource(properties.getProperty(CERT_AUTHORITY_FILE_PROPERTY),
                         this), properties.getProperty(CERT_AUTHORITY_PASS_PROPERTY,
-                    CERT_AUTHORITY_PASS_DEFAULT).toCharArray());
+                        CERT_AUTHORITY_PASS_DEFAULT).toCharArray());
             } else {
                 authorityKeyStore.load(ResourceLoader.getResourceFromLocations(CERT_AUTHORITY_FILE_DEFAULTNAME, this,
-                    "home:" + "/.config/cloud.io/",
-                    "file:/etc/cloud.io/",
-                    "classpath:cloud.io/"), properties.getProperty(CERT_AUTHORITY_PASS_PROPERTY,
-                    CERT_AUTHORITY_PASS_DEFAULT).toCharArray());
+                        "home:" + "/.config/cloud.io/",
+                        "file:/etc/cloud.io/",
+                        "classpath:cloud.io/"), properties.getProperty(CERT_AUTHORITY_PASS_PROPERTY,
+                        CERT_AUTHORITY_PASS_DEFAULT).toCharArray());
             }
 
             TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(CERT_AUTHORITY_MANAGER_TYPE);
@@ -908,11 +908,11 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
 
         private void set(String topic, Stack<String> location, CloudioMessageFormat messageFormat, byte[] data)
-            throws Exception {
+                throws Exception {
             // The path to the location must be start with the actual UUID of the endpoint.
             if (!location.isEmpty() && uuid.equals(location.pop()) &&
-                !location.isEmpty() && "nodes".equals(location.pop()) &&
-                !location.isEmpty()) {
+                    !location.isEmpty() && "nodes".equals(location.pop()) &&
+                    !location.isEmpty()) {
 
                 // Get the node with the name according to the topic.
                 CloudioNode.InternalNode node = nodes.getItem(location.peek());
