@@ -74,7 +74,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
     @SuppressWarnings("unchecked")
     @Override
     public void deserializeAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
-        throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
 
         JsonParser parser = new JsonFactory().createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
@@ -125,6 +125,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
         if (parser.nextToken() == JsonToken.START_OBJECT) {
             String jobURI;
             String correlationID;
+            String dataAttribute;
             Boolean sendOutput;
 
             while (parser.nextToken() != JsonToken.END_OBJECT) {
@@ -139,6 +140,9 @@ class JsonMessageFormat implements CloudioMessageFormat {
                 } else if ("correlationID".equals(fieldName)) {
                     correlationID = parser.getText();
                     jobsParameter.setCorrelationID(correlationID);
+                }else if ("data".equals(fieldName)) {
+                    dataAttribute = parser.getText();
+                    jobsParameter.setData(dataAttribute);
                 }
             }
         }

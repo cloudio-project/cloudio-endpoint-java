@@ -5,18 +5,22 @@ import org.apache.logging.log4j.Logger;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class JobsManager {
 
     private static final Logger log = LogManager.getLogger(JobsManager.class);
 
     private enum CmdJobs{
-        listJobs;
+        listJobs, updateJobs
     }
 
     private JobsManager(){
@@ -41,7 +45,7 @@ public class JobsManager {
         return result;
     }
 
-    public void executeJob(String jobURI, String filePath, String correlationID, Boolean output, MqttAsyncClient mqtt, CloudioMessageFormat messageFormat, String uuid){
+    public void executeJob(String jobURI, String filePath, String correlationID, Boolean output, String jobsData, MqttAsyncClient mqtt, CloudioMessageFormat messageFormat, String uuid){
         ProcessBuilder processBuilder = new ProcessBuilder();
 
         String[] splitJobUri = jobURI.split("://");
@@ -126,6 +130,37 @@ public class JobsManager {
                                 exception.printStackTrace();
                             }
                             break;
+                        case updateJobs:
+                            try {
+
+                                data = messageFormat.serializeJobsLineOutput(
+                                        new JobsLineOutput("Fetching file in  " + jobsData, correlationID));
+                                mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                                InputStream in = new URL(jobsData).openStream();
+                                Files.copy(in, Paths.get("tmp.zip"), StandardCopyOption.REPLACE_EXISTING);
+                                data = messageFormat.serializeJobsLineOutput(
+                                        new JobsLineOutput("UnZipping file in directory " + filePath, correlationID));
+                                mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                                unzipFileIntoDirectory("tmp.zip", filePath, mqtt, messageFormat, uuid, correlationID);
+                                data = messageFormat.serializeJobsLineOutput(
+                                        new JobsLineOutput("File successfully unzipped in " + filePath, correlationID));
+                                mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                            }catch (FileNotFoundException exception){
+                                log.error("Exception: " + exception.getMessage());
+                                exception.printStackTrace();
+                                try{
+                                    data = messageFormat.serializeJobsLineOutput(
+                                            new JobsLineOutput("Coudln't download file at specified URL: " + jobsData, correlationID));
+                                    mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                                }catch (Exception e){
+                                    log.error("Exception: " + e.getMessage());
+                                    e.printStackTrace();}
+
+                            }catch (Exception exception){
+                                log.error("Exception: " + exception.getMessage());
+                                exception.printStackTrace();
+                            }
+
                         default:
                             //shouldn't arrive, caught in IllegalArgumentException catch
                             break;
@@ -155,5 +190,43 @@ public class JobsManager {
                 }
                 break;
         }
+    }
+
+    private void unzipFileIntoDirectory(String archiveStr, String destinationDirStr, MqttAsyncClient mqtt, CloudioMessageFormat messageFormat, String uuid, String correlationID)
+            throws Exception {
+        File archive = new File(archiveStr);
+        File destinationDir = new File(destinationDirStr);
+        final int BUFFER_SIZE = 1024;
+        BufferedOutputStream dest = null;
+        FileInputStream fis = new FileInputStream(archive);
+        ZipInputStream zis = new ZipInputStream(new BufferedInputStream(fis));
+        ZipEntry entry;
+        File destFile;
+        byte[] dataMqtt;
+
+        while ((entry = zis.getNextEntry()) != null) {
+            dataMqtt = messageFormat.serializeJobsLineOutput(
+                    new JobsLineOutput("unZipped "+destinationDir+ File.separator +entry.getName(), correlationID));
+            mqtt.publish("@execOutput/" + uuid, dataMqtt, 1, false);
+            destFile = new File (destinationDir+ File.separator +entry.getName());
+            if (entry.isDirectory()) {
+                destFile.mkdirs();
+                continue;
+            } else {
+                int count;
+                byte data[] = new byte[BUFFER_SIZE];
+                destFile.getParentFile().mkdirs();
+                FileOutputStream fos = new FileOutputStream(destFile);
+                dest = new BufferedOutputStream(fos, BUFFER_SIZE);
+                while ((count = zis.read(data, 0, BUFFER_SIZE)) != -1) {
+                    dest.write(data, 0, count);
+                }
+                dest.flush();
+                dest.close();
+                fos.close();
+            }
+        }
+        zis.close();
+        fis.close();
     }
 }
