@@ -8,8 +8,8 @@ plugins {
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-group = rootProject.group
-version = rootProject.version
+group = 'ch.hevs.cloudio'
+version = '0.2.0-SNAPSHOT'
 
 repositories {
     mavenLocal()
