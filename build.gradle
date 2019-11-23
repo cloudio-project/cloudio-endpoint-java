@@ -53,8 +53,8 @@ publishing {
 }
 
 bintray {
-    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
-    key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_API_KEY')
     configurations = ['archives']
     pkg {
         repo = 'clients'
@@ -62,8 +62,8 @@ bintray {
         userOrg = 'cloudio-project'
         desc= 'cloud.iO Java endpoint library/client'
         websiteUrl = 'http://cloudio.hevs.ch'
-        issueTrackerUrl = 'https://github.com/cloudio-project/cloudio/issues'
-        vcsUrl = 'https://github.com/cloudio-project/cloudio'
+        issueTrackerUrl = 'https://github.com/cloudio-project'
+        vcsUrl = 'https://github.com/cloudio-project'
         licenses = ['MIT']
         version {
             name = project.version
