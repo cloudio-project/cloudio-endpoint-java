@@ -9,6 +9,9 @@ jobs:
   include:
     - stage: build
       script: "./gradlew build"
-    - stage: deploy
-      script: "./gradlew build bintrayUpload"
+    - stage: deploy_release
+      script: "./gradlew bintrayUpload"
       if: tag IS present
+    - stage: deploy_snapshot
+        script: "./gradlew artifactoryPublish"
+        if: tag IS blank AND branch = develop
