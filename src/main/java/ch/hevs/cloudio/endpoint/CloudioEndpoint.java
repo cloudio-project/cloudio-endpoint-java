@@ -375,8 +375,12 @@ public class CloudioEndpoint implements CloudioEndpointService {
         internal.beginTransaction();
     }
 
-    public void endTransaction(){
-        internal.endTransaction();
+    public void commitTransaction(){
+        internal.commitTransaction();
+    }
+
+    public void rollbackTransaction(){
+        internal.rollbackTransaction();
     }
 
     /*** Internal API *************************************************************************************************/
@@ -431,6 +435,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private final CloudioMessageFormat messageFormat;
         private final List<CloudioEndpointListener> listeners = new LinkedList<CloudioEndpointListener>();
         private String jobsFilePath;
+        private final Object transactionLock = new Object();
         private boolean inTransaction = false;
         private Transaction transaction = new Transaction();
 
@@ -548,15 +553,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
             // Create persistence object.
             String persistenceProvider = configuration.getProperty(MQTT_PERSISTENCE_PROPERTY, MQTT_PERSISTENCE_DEFAULT);
-            if (persistenceProvider.equals(MQTT_PERSISTENCE_TRUE)) {
-                persistence = true;
-            } else if (persistenceProvider.equals(MQTT_PERSISTENCE_FALSE)) {
-                persistence = false;
-            } else {
-                throw new InvalidPropertyException("Unknown persistence implementation " +
-                        "(ch.hevs.cloudio.endpoint.persistence): " +
-                        "\"" + persistenceProvider + "\"");
-            }
+            persistence = persistenceProvider.equals(MQTT_PERSISTENCE_TRUE);
 
             // Last will is a message with the UUID of the endpoint and no payload.
             options.setWill("@offline/" + uuid, new byte[0], 1, false);
@@ -644,7 +641,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                     } catch (Exception exception) {
                         log.error("Exception :" + exception.getMessage());
-                        //exception.printStackTrace();
+                        exception.printStackTrace();
                     }
                 }
             }
@@ -960,42 +957,52 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
 
         private void beginTransaction(){
-            inTransaction = true;
+            synchronized(transactionLock){
+                inTransaction = true;
+            }
         }
 
-        private void endTransaction() {
-            byte[] data = messageFormat.serializeTransaction(transaction);
-            boolean messageSend = false;
+        private void commitTransaction() {
+            synchronized(transactionLock) {
+                byte[] data = messageFormat.serializeTransaction(transaction);
+                boolean messageSend = false;
 
-            if (mqtt.isConnected()) {
-                try {
-                    mqtt.publish("@transaction/" + uuid, data, 1, true);
-                    messageSend = true;
-                    transaction.clearAttributes();
-                } catch (MqttException exception) {
-                    log.error("Exception :" + exception.getMessage());
-                    exception.printStackTrace();
+                if (mqtt.isConnected()) {
+                    try {
+                        mqtt.publish("@transaction/" + uuid, data, 1, true);
+                        messageSend = true;
+                        transaction.clearAttributes();
+                    } catch (MqttException exception) {
+                        log.error("Exception :" + exception.getMessage());
+                        exception.printStackTrace();
+                    }
                 }
-            }
 
-            // If the message could not be send for any reason, add the message to the pending updates persistence if
-            // available.
-            if (!messageSend && persistence) {
-                try {
-                    DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                    ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
-                    map.put("PendingUpdate-@transaction/" + uuid
-                                    + "-" + Calendar.getInstance().getTimeInMillis(),
-                            data);
-                    dbPersistenceData.close();
+                // If the message could not be send for any reason, add the message to the pending updates persistence if
+                // available.
+                if (!messageSend && persistence) {
+                    try {
+                        DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
+                        map.put("PendingUpdate-@transaction/" + uuid
+                                        + "-" + Calendar.getInstance().getTimeInMillis(),
+                                data);
+                        dbPersistenceData.close();
 
-                } catch (Exception exception) {
-                    log.error("Exception :" + exception.getMessage());
-                    //exception.printStackTrace();
+                    } catch (Exception exception) {
+                        log.error("Exception :" + exception.getMessage());
+                        exception.printStackTrace();
+                    }
                 }
-            }
 
-            inTransaction = false;
+                inTransaction = false;
+            }
+        }
+
+        private void rollbackTransaction(){
+            synchronized(transactionLock) {
+                transaction.clearAttributes();
+            }
         }
 
         void close() {
