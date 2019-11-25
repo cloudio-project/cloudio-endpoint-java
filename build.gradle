@@ -1,21 +1,72 @@
-buildscript {
-    ext {
-        kotlinVersion = '1.1.60'
-        springBootVersion = '1.5.8.RELEASE'
-        dockerPluginVersion = '1.2'
-    }
+plugins {
+    id 'java'
+    id 'maven'
+    id 'maven-publish'
+    id "com.jfrog.bintray" version "1.8.4"
+}
 
-    repositories {
-        jcenter()
-    }
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
 
-    dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
-        classpath("org.jetbrains.kotlin:kotlin-allopen:${kotlinVersion}")
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-        classpath("se.transmode.gradle:gradle-docker:${dockerPluginVersion}")
+group = 'ch.hevs.cloudio'
+version = '0.1.4'
+
+repositories {
+    mavenLocal()
+    jcenter()
+}
+
+dependencies {
+    compile 'com.fasterxml.jackson.core:jackson-core:2.6.4'
+    compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.2'
+    compile 'org.slf4j:slf4j-api:1.7.13'
+    testCompile 'junit:junit:4.12'
+}
+
+task sourcesJar(type: Jar, dependsOn:classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn:javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+
+        mavenSources(MavenPublication) {
+            from components.java
+            artifact sourcesJar
+        }
+
+        mavenJavadoc(MavenPublication) {
+            from components.java
+            artifact javadocJar
+        }
     }
 }
 
-group 'ch.hevs.cloudio'
-version '0.1.4'
+bintray {
+    user = "$System.env.BINTRAY_USER"
+    key = "$System.env.BINTRAY_KEY"
+    configurations = ['archives']
+    pkg {
+        repo = 'clients'
+        name = project.group + ':' + project.name
+        userOrg = 'cloudio-project'
+        desc= 'cloud.iO Java endpoint library/client'
+        websiteUrl = 'http://cloudio.hevs.ch'
+        issueTrackerUrl = 'https://github.com/cloudio-project/cloudio/issues'
+        vcsUrl = 'https://github.com/cloudio-project/cloudio'
+        licenses = ['MIT']
+        version {
+            name = project.version
+        }
+    }
+    publications = ['mavenJava', 'mavenSources', 'mavenJavadoc']
+}

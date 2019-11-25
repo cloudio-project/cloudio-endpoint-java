@@ -1,15 +1,1 @@
-rootProject.name = 'cloudio'
-
-include 'documentation'
-
-include 'cloudio-cloud-core'
-project(":cloudio-cloud-core").projectDir = file("cloud/cloudio-cloud-core")
-
-include 'cloudio-cloud-backend-mongo-influx'
-project(":cloudio-cloud-backend-mongo-influx").projectDir = file("cloud/cloudio-cloud-backend-mongo-influx")
-
-include 'cloudio-endpoint-java'
-project(":cloudio-endpoint-java").projectDir = file("endpoint/cloudio-endpoint-java")
-
-include 'cloudio-cloud-run'
-project(":cloudio-cloud-run").projectDir = file("cloud/cloudio-cloud-run")
+rootProject.name = 'cloudio-endpoint-java'

@@ -1,7 +1,0 @@
-CLOUDIO_SERVICES_CERTIFICATE_FILE: file:../cloudio-cloud-run/certificates/cloudio_services.p12
-CLOUDIO_CA_CERTIFICATE_FILE: file:../cloudio-cloud-run/certificates/ca-cert.jks
-CLOUDIO_CA_CERTIFICATE_PASSWORD: 123456
-
-CLOUDIO_AMQP_HOST: localhost
-CLOUDIO_MONGO_HOST: localhost
-CLOUDIO_INFLUX_HOST: localhost
