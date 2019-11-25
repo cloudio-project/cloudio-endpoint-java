@@ -435,7 +435,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private final CloudioMessageFormat messageFormat;
         private final List<CloudioEndpointListener> listeners = new LinkedList<CloudioEndpointListener>();
         private String jobsFilePath;
-        private final Object transactionLock = new Object();
         private boolean inTransaction = false;
         private Transaction transaction = new Transaction();
 
@@ -957,13 +956,13 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
 
         private void beginTransaction(){
-            synchronized(transactionLock){
+            synchronized(this){
                 inTransaction = true;
             }
         }
 
         private void commitTransaction() {
-            synchronized(transactionLock) {
+            synchronized(this) {
                 byte[] data = messageFormat.serializeTransaction(transaction);
                 boolean messageSend = false;
 
@@ -1000,7 +999,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
 
         private void rollbackTransaction(){
-            synchronized(transactionLock) {
+            synchronized(this) {
                 transaction.clearAttributes();
             }
         }
