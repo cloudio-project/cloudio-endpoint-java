@@ -14,4 +14,4 @@ jobs:
       if: tag IS present
     - stage: deploy_snapshot
       script: "./gradlew artifactoryPublish"
-      if: tag IS blank AND branch = develop
+      if: type = push AND tag IS blank AND branch = develop
