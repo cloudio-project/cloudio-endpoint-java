@@ -582,7 +582,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
             dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
             String logLevel = (String)map.getOrDefault(PERSISTENCE_LOG_LEVEL,"");
             if(logLevel.equals("")) {
-                map.put(PERSISTENCE_LOG_LEVEL, "DEBUG");
+                map.put(PERSISTENCE_LOG_LEVEL, "ERROR");
+                Configurator.setRootLevel(Level.ERROR);
             }
             else{
                 Level log4jLevel = Level.getLevel(logLevel);
