@@ -129,7 +129,7 @@ public class CloudioDynamicObject extends CloudioObject {
         throws DuplicateNamedItemException, InvalidCloudioAttributeException, CloudioAttributeInitializationException,
         CloudioAttributeConstraintException {
         CloudioAttribute<T> attribute = addAttribute(name, type, constraint);
-        attribute.setInitialAdlibValue(initialValue);
+        attribute.setInitialDynamicValue(initialValue);
         return attribute;
     }
 
