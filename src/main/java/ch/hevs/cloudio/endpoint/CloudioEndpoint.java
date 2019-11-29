@@ -80,29 +80,12 @@ import java.util.concurrent.ConcurrentMap;
  *     </li>
  *     <li>
  *         <b>ch.hevs.cloudio.endpoint.persistence</b><br>
- *         This option configures which persistence to use in order to save temporary data. Three options are possible:
- *         <br>
- *         <ul>
- *             <li>
- *                 <b>memory</b><br>
- *                 The temporary data is saved into memory. With this option, pending messages (data) can be lost
- *                 if the application is restarted. It is not advisable to use this persistence implementation in
- *                 productive environments.
- *             </li>
- *             <li>
- *                 <b>file</b><br>
- *                 The temporary data is saved onto the file system. Using this option, pending messages (data) will
- *                 not be lost during a restart of the application if not a clean session is forced using the option
- *                 ch.hevs.cloudio.endpoint.cleanSession.
- *             </li>
- *             <li>
- *                 <b>none</b><br>
- *                 No Persistence is used at all. Using this persistence, messages (data) will be almost certain be
- *                 lost, but if your application can handle such losses and you want to use as less as resources as
- *                 possible, this might be a solution.
- *             </li>
- *         </ul>
- *         This property is optional and the default is <b>file</b>.
+ *         This option configures if persistence should be used in order to save temporary data. If "true" (default)
+ *         the endpoint saves data that could not be send by MQTT and sends the later when the connection to the broker
+ *         has been (re)established. If set to "false" the endpoint drops the changes if the MQTT connection is
+ *         offline.
+ *
+ *         This property is optional and the default is <b>true</b>.
  *     </li>
  *     <li>
  *         <b>ch.hevs.cloudio.endpoint.ssl.clientCert</b><br>
@@ -167,6 +150,12 @@ import java.util.concurrent.ConcurrentMap;
  *         central broker. This means that pending messages from a previous session will be discarded. If it is "false"
  *         which is the default, pending messages from previous sessions will be send to the server upon the connection
  *         is established.
+ *     </li>
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.ssl.verifyHostname</b><br>
+ *         This property can be either "true" or "false". If it is "true", the hostname of the broker will be verified
+ *         the very same way as it is done by HTTPS. If "false" the host name is not verified at all. Per default the
+ *         hostname is verified (true).
  *     </li>
  * </ul>
  */
@@ -417,7 +406,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MQTT_CLEAN_SESSION_PROPERTY     = "ch.hevs.cloudio.endpoint.cleanSession";
         private static final String MQTT_CLEAN_SESSION_DEFAULT      = "false";
         private static final String ENDPOINT_JOBS_SCRIPT_FOLDER     = "ch.hevs.cloudio.endpoint.jobs.folder";
-
+        private static final String SSL_VERIFY_HOSTNAME_PROPERTY    = "ch.hevs.cloudio.endpoint.ssl.verifyHostname";
+        private static final String SSL_VERIFY_HOSTNAME_DEFAULT     = "true";
 
         /*** MapDB parameters******************************************************************************************/
         private static final String PERSISTENCE_FILE                = "cloudiOPersistenceData.db";
@@ -492,6 +482,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
             } catch (Exception exception) {
                 throw new CloudioEndpointInitializationException(exception);
             }
+
+            // Enable or disable HTTPS hostname verification.
+            options.setHttpsHostnameVerificationEnabled("true".equals(configuration.getProperty(SSL_VERIFY_HOSTNAME_PROPERTY, SSL_VERIFY_HOSTNAME_DEFAULT)));
 
             // Get retry interval.
             try {
