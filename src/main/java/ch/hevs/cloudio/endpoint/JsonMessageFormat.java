@@ -71,6 +71,21 @@ class JsonMessageFormat implements CloudioMessageFormat {
         return outputStream.toByteArray();
     }
 
+    @Override
+    public byte[] serializeTransaction(Transaction transaction){
+        ByteArrayBuilder outputStream = new ByteArrayBuilder();
+        try {
+            JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
+            serializeTransaction(transaction, generator);
+            generator.flush();
+        } catch (IOException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+        return outputStream.toByteArray();
+
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public void deserializeAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
@@ -261,6 +276,22 @@ class JsonMessageFormat implements CloudioMessageFormat {
 
         generator.writeEndObject();
     }
+
+    private void serializeTransaction(Transaction transaction, JsonGenerator generator) throws IOException {
+        generator.writeStartObject();
+
+        List<CloudioAttribute.InternalAttribute> attributes = transaction.getAttributes();
+        generator.writeObjectFieldStart("attributes");
+        for (CloudioAttribute.InternalAttribute attribute: attributes) {
+            generator.writeFieldName(attribute.getUuid().toString());
+            serializeAttribute(attribute, generator);
+        }
+        generator.writeEndObject();
+
+        generator.writeEndObject();
+
+    }
+
 
     private void serializeCloudioLog(CloudioLogMessage cloudioLogMessage, JsonGenerator generator) throws IOException {
         generator.writeStartObject();

@@ -32,6 +32,11 @@ class JsonZipMessageFormat extends JsonMessageFormat {
     }
 
     @Override
+    public byte[] serializeTransaction(Transaction transaction) {
+        return compress(super.serializeTransaction(transaction));
+    }
+
+    @Override
     public void deserializeAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
         throws CloudioAttributeConstraintException, NumberFormatException, IOException {
         try {
