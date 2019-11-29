@@ -150,7 +150,7 @@ public class JobsManager {
                                 exception.printStackTrace();
                                 try{
                                     data = messageFormat.serializeJobsLineOutput(
-                                            new JobsLineOutput("Coudln't download file at specified URL: " + jobsData, correlationID));
+                                            new JobsLineOutput("Couldn't download file at specified URL: " + jobsData, correlationID));
                                     mqtt.publish("@execOutput/" + uuid, data, 1, false);
                                 }catch (Exception e){
                                     log.error("Exception: " + e.getMessage());

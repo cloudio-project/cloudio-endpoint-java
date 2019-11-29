@@ -773,8 +773,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                         @Override
                                         public void run() {
                                             try {
-                                                @SuppressWarnings("unchecked")
-
                                                 DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
                                                 ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
 

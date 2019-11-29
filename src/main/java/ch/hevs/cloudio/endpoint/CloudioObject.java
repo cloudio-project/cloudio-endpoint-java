@@ -163,7 +163,6 @@ public class CloudioObject {
         }
 
         /*** AttributeContainer implementation ************************************************************************/
-        @SuppressWarnings("ConstantConditions")
         @Override
         public NamedItemSet<CloudioAttribute.InternalAttribute> getAttributes() {
             if (!staticAttributesAdded) {

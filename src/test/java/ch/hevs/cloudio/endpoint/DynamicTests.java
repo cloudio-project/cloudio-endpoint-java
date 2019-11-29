@@ -2,14 +2,14 @@ package ch.hevs.cloudio.endpoint;
 
 import org.junit.Test;
 
-public class CustomTests {
+public class DynamicTests {
     @Test
     public void customManualTest() throws DuplicateNamedItemException, CloudioAttributeInitializationException,
         CloudioAttributeConstraintException {
-        CloudioAdLibNode node = new CloudioAdLibNode();
+        CloudioDynamicNode node = new CloudioDynamicNode();
         node.declareImplementedInterface("TestInterface");
 
-        CloudioAdLibObject object = new CloudioAdLibObject();
+        CloudioDynamicObject object = new CloudioDynamicObject();
         object.addAttribute("testAttribute", Boolean.class, CloudioAttributeConstraint.Measure);
         object.addAttribute("staticAttribute", Integer.class, CloudioAttributeConstraint.Static, 55);
 
@@ -18,8 +18,8 @@ public class CustomTests {
 
     @Test
     public void customBuilderTest() throws DuplicateNamedItemException {
-        new CloudioAdLibNode.Builder().implement("TestInterface").object("testObject",
-            new CloudioAdLibObject.Builder().attribute("testAttribute", Boolean.class, CloudioAttributeConstraint.Measure).build())
+        new CloudioDynamicNode.Builder().implement("TestInterface").object("testObject",
+            new CloudioDynamicObject.Builder().attribute("testAttribute", Boolean.class, CloudioAttributeConstraint.Measure).build())
             .build();
     }
 }
