@@ -168,6 +168,12 @@ import java.util.concurrent.ConcurrentMap;
  *         which is the default, pending messages from previous sessions will be send to the server upon the connection
  *         is established.
  *     </li>
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.ssl.verifyHostname</b><br>
+ *         This property can be either "true" or "false". If it is "true", the hostname of the broker will be verified
+ *         the very same way as it is done by HTTPS. If "false" the host name is not verified at all. Per default the
+ *         hostname is verified (true).
+ *     </li>
  * </ul>
  */
 public class CloudioEndpoint implements CloudioEndpointService {
@@ -417,7 +423,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MQTT_CLEAN_SESSION_PROPERTY     = "ch.hevs.cloudio.endpoint.cleanSession";
         private static final String MQTT_CLEAN_SESSION_DEFAULT      = "false";
         private static final String ENDPOINT_JOBS_SCRIPT_FOLDER     = "ch.hevs.cloudio.endpoint.jobs.folder";
-
+        private static final String SSL_VERIFY_HOSTNAME_PROPERTY    = "ch.hevs.cloudio.endpoint.ssl.verifyHostname";
+        private static final String SSL_VERIFY_HOSTNAME_DEFAULT     = "true";
 
         /*** MapDB parameters******************************************************************************************/
         private static final String PERSISTENCE_FILE                = "cloudiOPersistenceData.db";
@@ -492,6 +499,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
             } catch (Exception exception) {
                 throw new CloudioEndpointInitializationException(exception);
             }
+
+            // Enable or disable HTTPS hostname verification.
+            options.setHttpsHostnameVerificationEnabled("true".equals(configuration.getProperty(SSL_VERIFY_HOSTNAME_PROPERTY, SSL_VERIFY_HOSTNAME_DEFAULT)));
 
             // Get retry interval.
             try {
