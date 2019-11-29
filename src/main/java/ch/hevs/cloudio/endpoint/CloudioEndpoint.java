@@ -80,29 +80,12 @@ import java.util.concurrent.ConcurrentMap;
  *     </li>
  *     <li>
  *         <b>ch.hevs.cloudio.endpoint.persistence</b><br>
- *         This option configures which persistence to use in order to save temporary data. Three options are possible:
- *         <br>
- *         <ul>
- *             <li>
- *                 <b>memory</b><br>
- *                 The temporary data is saved into memory. With this option, pending messages (data) can be lost
- *                 if the application is restarted. It is not advisable to use this persistence implementation in
- *                 productive environments.
- *             </li>
- *             <li>
- *                 <b>file</b><br>
- *                 The temporary data is saved onto the file system. Using this option, pending messages (data) will
- *                 not be lost during a restart of the application if not a clean session is forced using the option
- *                 ch.hevs.cloudio.endpoint.cleanSession.
- *             </li>
- *             <li>
- *                 <b>none</b><br>
- *                 No Persistence is used at all. Using this persistence, messages (data) will be almost certain be
- *                 lost, but if your application can handle such losses and you want to use as less as resources as
- *                 possible, this might be a solution.
- *             </li>
- *         </ul>
- *         This property is optional and the default is <b>file</b>.
+ *         This option configures if persistence should be used in order to save temporary data. If "true" (default)
+ *         the endpoint saves data that could not be send by MQTT and sends the later when the connection to the broker
+ *         has been (re)established. If set to "false" the endpoint drops the changes if the MQTT connection is
+ *         offline.
+ *
+ *         This property is optional and the default is <b>true</b>.
  *     </li>
  *     <li>
  *         <b>ch.hevs.cloudio.endpoint.ssl.clientCert</b><br>
