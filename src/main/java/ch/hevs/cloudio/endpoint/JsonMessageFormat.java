@@ -280,7 +280,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
     private void serializeTransaction(Transaction transaction, JsonGenerator generator) throws IOException {
         generator.writeStartObject();
 
-        NamedItemSet<CloudioAttribute.InternalAttribute> attributes = transaction.getAttributes();
+        List<CloudioAttribute.InternalAttribute> attributes = transaction.getAttributes();
         generator.writeObjectFieldStart("attributes");
         for (CloudioAttribute.InternalAttribute attribute: attributes) {
             generator.writeFieldName(attribute.getUuid().toString());

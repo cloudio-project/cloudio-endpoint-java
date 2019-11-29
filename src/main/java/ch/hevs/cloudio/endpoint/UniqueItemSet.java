@@ -10,36 +10,36 @@ import java.util.List;
  * A NamedItemSet can contain a set of objects that implement the {@link NamedItem} interface. It guarantees that the
  * names of all members are unique within the set.
  */
-class NamedItemSet<T extends NamedItem> implements Iterable<T> {
+class UniqueItemSet<T extends UniqueIdentifiable> implements Iterable<T> {
     private final List<T> items = new LinkedList<T>();
 
     /**
-     * Returns the item with the given name or null if no such item is in the set.
+     * Returns the item with the given UUID or null if no such item is in the set.
      *
-     * @param itemName  Name of the item to search for.
-     * @return          Item or null if no item with the given name is part of the set.
+     * @param uuid  UUID of the item to search for.
+     * @return      Item or null if no item with the given name is part of the set.
      */
-    public T getItem(String itemName) {
+    public T getItem(Uuid uuid) {
         for (T item: items) {
-            if (item.getName().equals(itemName))
+            if (item.getUuid().equals(uuid))
                 return item;
         }
         return null;
     }
 
     /**
-     * Adds the given item to the set. Note that if an item with the same name already exists in the set, an
+     * Adds the given item to the set. Note that if an item with the same UUID already exists in the set, an
      * {@link DuplicateItemException} is thrown.
      *
-     * @param item                          Item to add to the set.
+     * @param item                     Item to add to the set.
      * @throws DuplicateItemException  If an item with the same name already exists in the set.
      */
     public void addItem(T item) throws DuplicateItemException {
         if (item != null) {
-            if (getItem(item.getName()) == null) {
+            if (getItem(item.getUuid()) == null) {
                 items.add(item);
             } else {
-                throw new DuplicateItemException(item.getName());
+                throw new DuplicateItemException(item.getUuid());
             }
         }
     }
@@ -56,13 +56,13 @@ class NamedItemSet<T extends NamedItem> implements Iterable<T> {
     }
 
     /**
-     * Removes the item with the given name from the set.
+     * Removes the item with the given UUID from the set.
      *
-     * @param name  Name of the item to remove.
+     * @param uuid  UUID of the item to remove.
      */
-    public void removeItem(String name) {
+    public void removeItem(Uuid uuid) {
         for (T item: items) {
-            if (item.getName().equals(name)) {
+            if (item.getUuid().equals(uuid)) {
                 removeItem(item);
             }
         }

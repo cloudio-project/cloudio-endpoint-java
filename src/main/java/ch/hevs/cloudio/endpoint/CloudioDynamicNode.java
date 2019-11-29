@@ -30,10 +30,10 @@ public class CloudioDynamicNode extends CloudioNode {
      * @param clazz                         The class of the object to create and add.
      * @param <T>                           Type of the object.
      * @return                              The object just created and added.
-     * @throws DuplicateNamedItemException  If there already exists an object with the given name.
+     * @throws DuplicateItemException  If there already exists an object with the given name.
      * @throws InvalidCloudioObjectException       The object class is invalid.
      */
-    public <T extends CloudioObject> T addObject(final String name, final Class<T> clazz) throws DuplicateNamedItemException,
+    public <T extends CloudioObject> T addObject(final String name, final Class<T> clazz) throws DuplicateItemException,
         InvalidCloudioObjectException {
         if (internal.isNodeRegisteredWithinEndpoint()) {
             throw new RuntimeException("A CloudioAdLibNode's structure can only be modified before it is registered within" +
@@ -55,9 +55,9 @@ public class CloudioDynamicNode extends CloudioNode {
      *
      * @param name                          Name to give to the object inside the node.
      * @param object                        The object to add.
-     * @throws DuplicateNamedItemException  If there already exists an object with the given name.
+     * @throws DuplicateItemException  If there already exists an object with the given name.
      */
-    public void addObject(final String name, final CloudioObject object) throws DuplicateNamedItemException {
+    public void addObject(final String name, final CloudioObject object) throws DuplicateItemException {
         if (internal.isNodeRegisteredWithinEndpoint()) {
             throw new RuntimeException("A CloudioAdLibNode's structure can only be modified before it is registered within" +
                 " the endpoint!");
@@ -111,11 +111,11 @@ public class CloudioDynamicNode extends CloudioNode {
          * @param clazz                         The class of the object to create and add.
          * @param <T>                           Type of the object.
          * @return                              Returns a reference to the builder in order to chain method calls.
-         * @throws DuplicateNamedItemException  If there already exists an object with the given name.
+         * @throws DuplicateItemException  If there already exists an object with the given name.
          * @throws InvalidCloudioObjectException       The object class is invalid.
          */
         public <T extends CloudioObject> Builder object(final String name, final Class<T> clazz)
-            throws DuplicateNamedItemException, InvalidCloudioObjectException {
+            throws DuplicateItemException, InvalidCloudioObjectException {
             node.addObject(name, clazz);
             return this;
         }
@@ -126,9 +126,9 @@ public class CloudioDynamicNode extends CloudioNode {
          * @param name                          Name to give to the object inside the node.
          * @param object                        The object to add.
          * @return                              Returns a reference to the builder in order to chain method calls.
-         * @throws DuplicateNamedItemException  If there already exists an object with the given name.
+         * @throws DuplicateItemException  If there already exists an object with the given name.
          */
-        public Builder object(final String name, final CloudioObject object) throws DuplicateNamedItemException {
+        public Builder object(final String name, final CloudioObject object) throws DuplicateItemException {
             node.addObject(name, object);
             return this;
         }

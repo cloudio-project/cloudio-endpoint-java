@@ -52,7 +52,7 @@ public class CloudioObject {
                         // Add the object to the list of objects.
                         try {
                             objects.addItem(object.internal);
-                        } catch (DuplicateNamedItemException e) {
+                        } catch (DuplicateItemException e) {
                             throw new CloudioModificationException(
                                 "Duplicate name for fields, your Java compiler sucks ;-)");
                         }
@@ -89,7 +89,7 @@ public class CloudioObject {
                         // Add the object to the list of attributes.
                         try {
                             attributes.addItem(attribute.internal);
-                        } catch (DuplicateNamedItemException e) {
+                        } catch (DuplicateItemException e) {
                             throw new CloudioModificationException(
                                 "Duplicate name for fields, your Java compiler sucks ;-)");
                         }
@@ -185,7 +185,7 @@ public class CloudioObject {
                                 }
                                 try {
                                     attributes.addItem(attribute);
-                                } catch (DuplicateNamedItemException e) {
+                                } catch (DuplicateItemException e) {
                                     throw new CloudioModificationException("Duplicate name for fields, " +
                                         "your Java compiler sucks ;-)");
                                 }
@@ -215,7 +215,7 @@ public class CloudioObject {
                                 }
                                 try {
                                     attributes.addItem(attribute);
-                                } catch (DuplicateNamedItemException e) {
+                                } catch (DuplicateItemException e) {
                                     throw new CloudioModificationException("Duplicate name for fields, " +
                                         "your Java compiler sucks ;-)");
                                 }
@@ -244,7 +244,7 @@ public class CloudioObject {
                                 }
                                 try {
                                     attributes.addItem(attribute);
-                                } catch (DuplicateNamedItemException exception) {
+                                } catch (DuplicateItemException exception) {
                                     throw new CloudioModificationException("Duplicate name for fields, " +
                                         "your Java compiler sucks ;-)");
                                 }
@@ -272,7 +272,7 @@ public class CloudioObject {
                                 }
                                 try {
                                     attributes.addItem(attribute);
-                                } catch (DuplicateNamedItemException exception) {
+                                } catch (DuplicateItemException exception) {
                                     throw new CloudioModificationException("Duplicate name for fields, " +
                                         "your Java compiler sucks ;-)");
                                 }

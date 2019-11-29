@@ -29,27 +29,27 @@ public interface CloudioEndpointService {
 
     /**
      * Adds the given node to the endpoint. The name of the node needs to be unique, otherwise the method will fail with
-     * an {@link DuplicateNamedItemException}.
+     * an {@link DuplicateItemException}.
      *
      * @param nodeName                      Name to give to the node.
      * @param node                          Reference to the node instance to add.
-     * @throws DuplicateNamedItemException  If a node with the given name already exists.
+     * @throws DuplicateItemException  If a node with the given name already exists.
      */
-    void addNode(String nodeName, CloudioNode node) throws DuplicateNamedItemException;
+    void addNode(String nodeName, CloudioNode node) throws DuplicateItemException;
 
     /**
      * Adds a new node instance of the given node class to the endpoint. The name of the node needs to be unique,
-     * otherwise the method will fail with an {@link DuplicateNamedItemException}. Note that the node class must dispose
+     * otherwise the method will fail with an {@link DuplicateItemException}. Note that the node class must dispose
      * a default constructor in order to let the method create an instance of the class.
      *
      * @param nodeName                      Name to give to the node.
      * @param nodeClass                     The class of the node to instantiate.
      * @param <T>                           Type of the node class.
      * @return                              Reference to the new instance of the given node class.
-     * @throws DuplicateNamedItemException  If a node with the given name already exists.
+     * @throws DuplicateItemException  If a node with the given name already exists.
      */
     <T extends CloudioNode> T addNode(String nodeName, Class<T> nodeClass)
-        throws InvalidCloudioNodeException, DuplicateNamedItemException;
+        throws InvalidCloudioNodeException, DuplicateItemException;
 
     /**
      * Removes the given node from the endpoint if the node actually is part of the endpoint. If the node was not

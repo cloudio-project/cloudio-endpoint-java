@@ -4,7 +4,7 @@ import org.junit.Test;
 
 public class DynamicTests {
     @Test
-    public void customManualTest() throws DuplicateNamedItemException, CloudioAttributeInitializationException,
+    public void customManualTest() throws DuplicateItemException, CloudioAttributeInitializationException,
         CloudioAttributeConstraintException {
         CloudioDynamicNode node = new CloudioDynamicNode();
         node.declareImplementedInterface("TestInterface");
@@ -17,7 +17,7 @@ public class DynamicTests {
     }
 
     @Test
-    public void customBuilderTest() throws DuplicateNamedItemException {
+    public void customBuilderTest() throws DuplicateItemException {
         new CloudioDynamicNode.Builder().implement("TestInterface").object("testObject",
             new CloudioDynamicObject.Builder().attribute("testAttribute", Boolean.class, CloudioAttributeConstraint.Measure).build())
             .build();

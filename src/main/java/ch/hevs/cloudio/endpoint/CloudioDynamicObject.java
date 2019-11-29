@@ -32,10 +32,10 @@ public class CloudioDynamicObject extends CloudioObject {
      * @param clazz                         The class of the object to create and add.
      * @param <T>                           Type of the object.
      * @return                              The object just created and added.
-     * @throws DuplicateNamedItemException  If there already exists an object with the given name.
+     * @throws DuplicateItemException  If there already exists an object with the given name.
      * @throws InvalidCloudioObjectException       The object class is invalid.
      */
-    public <T extends CloudioObject> T addObject(final String name, final Class<T> clazz) throws DuplicateNamedItemException,
+    public <T extends CloudioObject> T addObject(final String name, final Class<T> clazz) throws DuplicateItemException,
         InvalidCloudioObjectException {
         if (internal.isNodeRegisteredWithinEndpoint()) {
             throw new CloudioModificationException(
@@ -57,9 +57,9 @@ public class CloudioDynamicObject extends CloudioObject {
      *
      * @param name                          Name to give to the object inside the node.
      * @param object                        The object to add.
-     * @throws DuplicateNamedItemException  If there already exists an object with the given name.
+     * @throws DuplicateItemException  If there already exists an object with the given name.
      */
-    public void addObject(final String name, final CloudioObject object) throws DuplicateNamedItemException {
+    public void addObject(final String name, final CloudioObject object) throws DuplicateItemException {
         if (internal.isNodeRegisteredWithinEndpoint()) {
             throw new CloudioModificationException(
                 "A CloudioAdLibNode's structure can only be modified before it is registered within the endpoint!");
@@ -89,11 +89,11 @@ public class CloudioDynamicObject extends CloudioObject {
      * @param constraint                    Attribute's constraint.
      * @param <T>                           Attribute's type.
      * @return                              Reference to the newly instantiated attribute.
-     * @throws DuplicateNamedItemException  If there already exists an attribute with the given name.
+     * @throws DuplicateItemException  If there already exists an attribute with the given name.
      * @throws InvalidCloudioAttributeException    If the type of the attribute is not supported.
      */
     public <T> CloudioAttribute<T> addAttribute(final String name, final Class<T> type, CloudioAttributeConstraint constraint)
-        throws DuplicateNamedItemException, InvalidCloudioAttributeException {
+        throws DuplicateItemException, InvalidCloudioAttributeException {
         if (internal.isNodeRegisteredWithinEndpoint()) {
             throw new CloudioModificationException(
                 "A CloudioAdLibObject's structure can only be modified before it is registered within the endpoint!");
@@ -119,14 +119,14 @@ public class CloudioDynamicObject extends CloudioObject {
      * @param initialValue                      Initial value for the attribute.
      * @param <T>                               Attribute's type.
      * @return                                  Reference to the newly instantiated attribute.
-     * @throws DuplicateNamedItemException      If there already exists an attribute with the given name.
+     * @throws DuplicateItemException      If there already exists an attribute with the given name.
      * @throws InvalidCloudioAttributeException        If the type of the attribute is not supported.
      * @throws CloudioAttributeInitializationException If the attribute could not be initialized.
      * @throws CloudioAttributeConstraintException     If the attribute can not be initialized (constraint).
      */
     public <T> CloudioAttribute<T> addAttribute(final String name, final Class<T> type, CloudioAttributeConstraint constraint,
                                                 T initialValue)
-        throws DuplicateNamedItemException, InvalidCloudioAttributeException, CloudioAttributeInitializationException,
+        throws DuplicateItemException, InvalidCloudioAttributeException, CloudioAttributeInitializationException,
         CloudioAttributeConstraintException {
         CloudioAttribute<T> attribute = addAttribute(name, type, constraint);
         attribute.setInitialDynamicValue(initialValue);
@@ -162,11 +162,11 @@ public class CloudioDynamicObject extends CloudioObject {
          * @param clazz                         The class of the object to create and add.
          * @param <T>                           Type of the object.
          * @return                              Returns a reference to the builder in order to chain method calls.
-         * @throws DuplicateNamedItemException  If there already exists an object with the given name.
+         * @throws DuplicateItemException  If there already exists an object with the given name.
          * @throws InvalidCloudioObjectException       The object class is invalid.
          */
         public <T extends CloudioObject> Builder object(final String name, final Class<T> clazz)
-            throws DuplicateNamedItemException, InvalidCloudioObjectException {
+            throws DuplicateItemException, InvalidCloudioObjectException {
             object.addObject(name, clazz);
             return this;
         }
@@ -177,9 +177,9 @@ public class CloudioDynamicObject extends CloudioObject {
          * @param name                          Name to give to the object inside the object.
          * @param object                        The object to add.
          * @return                              Returns a reference to the builder in order to chain method calls.
-         * @throws DuplicateNamedItemException  If there already exists an object with the given name.
+         * @throws DuplicateItemException  If there already exists an object with the given name.
          */
-        public Builder object(final String name, final CloudioObject object) throws DuplicateNamedItemException {
+        public Builder object(final String name, final CloudioObject object) throws DuplicateItemException {
             this.object.addObject(name, object);
             return this;
         }
@@ -193,10 +193,10 @@ public class CloudioDynamicObject extends CloudioObject {
          * @param type                          Type of the attribute to add.
          * @param constraint                    Attribute's constraint.
          * @return                              Returns a reference to the builder in order to chain method calls.
-         * @throws DuplicateNamedItemException  If there already exists an attribute with the given name.
+         * @throws DuplicateItemException  If there already exists an attribute with the given name.
          */
         public Builder attribute(final String name, final Class type, CloudioAttributeConstraint constraint)
-            throws DuplicateNamedItemException {
+            throws DuplicateItemException {
             object.addAttribute(name, type, constraint);
             return this;
         }
@@ -214,12 +214,12 @@ public class CloudioDynamicObject extends CloudioObject {
          * @return                                  Returns a reference to the builder in order to chain method calls.
          * @throws CloudioAttributeInitializationException If the attribute could not be initialized.
          * @throws CloudioAttributeConstraintException     If the attribute can not be initialized (constraint).
-         * @throws DuplicateNamedItemException      If there already exists an attribute with the given name.
+         * @throws DuplicateItemException      If there already exists an attribute with the given name.
          * @throws InvalidCloudioAttributeException        If the type of the attribute is not supported.
          */
         public <T> Builder attribute(final String name, final Class<T> type, CloudioAttributeConstraint constraint,
                                      final T initialValue)
-            throws CloudioAttributeInitializationException, CloudioAttributeConstraintException, DuplicateNamedItemException,
+            throws CloudioAttributeInitializationException, CloudioAttributeConstraintException, DuplicateItemException,
             InvalidCloudioAttributeException {
             object.addAttribute(name, type, constraint, initialValue);
             return this;
@@ -235,12 +235,12 @@ public class CloudioDynamicObject extends CloudioObject {
          * @param constraint                    Attribute's constraint.
          * @param listener                      CloudioAttributeListener to add to the new attribute.
          * @return                              Returns a reference to the builder in order to chain method calls.
-         * @throws DuplicateNamedItemException  If there already exists an attribute with the given name.
+         * @throws DuplicateItemException  If there already exists an attribute with the given name.
          * @throws InvalidCloudioAttributeException    If the type of the attribute is not supported.
          */
         public Builder attribute(final String name, final Class type, CloudioAttributeConstraint constraint,
                                  final CloudioAttributeListener listener)
-            throws DuplicateNamedItemException, InvalidCloudioAttributeException {
+            throws DuplicateItemException, InvalidCloudioAttributeException {
             CloudioAttribute attribute = object.addAttribute(name, type, constraint);
             attribute.addListener(listener);
             return this;
@@ -261,12 +261,12 @@ public class CloudioDynamicObject extends CloudioObject {
          * @return                                  Returns a reference to the builder in order to chain method calls.
          * @throws CloudioAttributeInitializationException If the attribute could not be initialized.
          * @throws CloudioAttributeConstraintException     If the attribute can not be initialized (constraint).
-         * @throws DuplicateNamedItemException      If there already exists an attribute with the given name.
+         * @throws DuplicateItemException      If there already exists an attribute with the given name.
          * @throws InvalidCloudioAttributeException        If the type of the attribute is not supported.
          */
         public <T> Builder attribute(final String name, final Class<T> type, CloudioAttributeConstraint constraint,
                                      final T initialValue, CloudioAttributeListener<T> listener)
-            throws CloudioAttributeInitializationException, CloudioAttributeConstraintException, DuplicateNamedItemException,
+            throws CloudioAttributeInitializationException, CloudioAttributeConstraintException, DuplicateItemException,
             InvalidCloudioAttributeException {
             CloudioAttribute<T> attribute = object.addAttribute(name, type, constraint, initialValue);
             attribute.addListener(listener);

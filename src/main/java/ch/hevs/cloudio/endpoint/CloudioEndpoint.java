@@ -266,7 +266,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
     }
 
     @Override
-    public void addNode(String nodeName, CloudioNode node) throws DuplicateNamedItemException {
+    public void addNode(String nodeName, CloudioNode node) throws DuplicateItemException {
         if (nodeName != null && node != null) {
             // Add node to endpoint.
             node.internal.setName(nodeName);
@@ -288,7 +288,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
     @Override
     public <T extends CloudioNode> T addNode(String nodeName, Class<T> nodeClass)
-            throws InvalidCloudioNodeException, DuplicateNamedItemException {
+            throws InvalidCloudioNodeException, DuplicateItemException {
         if (nodeName != null && nodeClass != null) {
             try {
                 // Create node instance.
