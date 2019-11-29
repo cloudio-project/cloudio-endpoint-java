@@ -468,8 +468,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
             String messageFormatId = configuration.getProperty(MESSAGE_FORMAT, MESSAGE_FORMAT_DEFAULT);
             if ("json".equals(messageFormatId)) {
                 messageFormat = new JsonMessageFormat();
-            } else if ("json+zip".equals(messageFormatId)) {
-                messageFormat = new JsonZipMessageFormat();
             } else {
                 throw new InvalidPropertyException("Unknown message format (ch.hevs.cloudio.endpoint.messageFormat): " +
                         "\"" + messageFormatId + "\"");
