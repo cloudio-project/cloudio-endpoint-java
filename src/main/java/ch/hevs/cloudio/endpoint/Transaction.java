@@ -3,7 +3,7 @@ package ch.hevs.cloudio.endpoint;
 import java.util.LinkedList;
 import java.util.List;
 
-public class Transaction {
+class Transaction {
 
     private final List<CloudioAttribute.InternalAttribute> attributes =
             new LinkedList<CloudioAttribute.InternalAttribute>();
