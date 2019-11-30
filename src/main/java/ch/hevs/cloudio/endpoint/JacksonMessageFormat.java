@@ -91,7 +91,7 @@ class JacksonMessageFormat implements CloudioMessageFormat {
     public void deserializeAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
         throws CloudioAttributeConstraintException, NumberFormatException, IOException {
 
-        JsonParser parser = new JsonFactory().createParser(data);
+        JsonParser parser = factory.createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
             long timestamp = 0;
             String value = null;
@@ -136,7 +136,7 @@ class JacksonMessageFormat implements CloudioMessageFormat {
     @Override
     public void deserializeJobsParameter(byte[] data, JobsParameter jobsParameter)
         throws NumberFormatException, IOException {
-        JsonParser parser = new JsonFactory().createParser(data);
+        JsonParser parser = factory.createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
             String jobURI;
             String correlationID;
@@ -167,7 +167,7 @@ class JacksonMessageFormat implements CloudioMessageFormat {
     @Override
     public void deserializeLogParameter(byte[] data, LogParameter logParameter)
         throws NumberFormatException, IOException {
-        JsonParser parser = new JsonFactory().createParser(data);
+        JsonParser parser = factory.createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
             String level;
             while (parser.nextToken() != JsonToken.END_OBJECT) {
