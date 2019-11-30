@@ -6,16 +6,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Set;
 
 /**
- * Encodes messages using JSON (JavaScript Object Notation). All messages have to start with the identifier for this
- * format 0x7B ('{' character).
+ * Encodes messages using the Jackson serialization API. The actual format is determined by the passed factory instance. If a JsonFactory object is passed,
+ * JSON is used to serialize the data, if a CBORFactory object is passed the format used will be CBOR.
  */
-class JsonMessageFormat implements CloudioMessageFormat {
-    private static final Logger log = LogManager.getLogger(JsonMessageFormat.class);
-    private final JsonFactory factory = new JsonFactory();
+class JacksonMessageFormat implements CloudioMessageFormat {
+    private final Logger log = LogManager.getLogger(JacksonMessageFormat.class);
+    private final JsonFactory factory;
+
+    JacksonMessageFormat(JsonFactory factory) {
+        this.factory = factory;
+    }
 
     @Override
     public byte[] serializeEndpoint(CloudioEndpoint.InternalEndpoint endpoint) {
@@ -25,9 +27,8 @@ class JsonMessageFormat implements CloudioMessageFormat {
 
             generator.writeStartObject();
 
-            List<CloudioNode.InternalNode> nodes = endpoint.getNodes();
             generator.writeObjectFieldStart("nodes");
-            for (CloudioNode.InternalNode node: nodes) {
+            for (CloudioNode.InternalNode node : endpoint.getNodes()) {
                 generator.writeFieldName(node.getName());
                 serializeNode(node, generator);
             }
@@ -58,7 +59,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
     }
 
     @Override
-    public byte[] serializeAttribute(CloudioAttribute.InternalAttribute attribute) {
+    public byte[] serializeAttribute(CloudioAttribute<?>.InternalAttribute attribute) {
         ByteArrayBuilder outputStream = new ByteArrayBuilder();
         try {
             JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
@@ -72,7 +73,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
     }
 
     @Override
-    public byte[] serializeTransaction(Transaction transaction){
+    public byte[] serializeTransaction(Transaction transaction) {
         ByteArrayBuilder outputStream = new ByteArrayBuilder();
         try {
             JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
@@ -86,10 +87,9 @@ class JsonMessageFormat implements CloudioMessageFormat {
 
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public void deserializeAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
-            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+        throws CloudioAttributeConstraintException, NumberFormatException, IOException {
 
         JsonParser parser = new JsonFactory().createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
@@ -100,7 +100,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
                 String fieldName = parser.getCurrentName();
                 parser.nextToken();
                 if ("timestamp".equals(fieldName)) {
-                    timestamp = (long)(parser.getDoubleValue() * 1000);
+                    timestamp = (long) (parser.getDoubleValue() * 1000);
                 } else if ("value".equals(fieldName)) {
                     value = parser.getText();
                 }
@@ -135,13 +135,13 @@ class JsonMessageFormat implements CloudioMessageFormat {
 
     @Override
     public void deserializeJobsParameter(byte[] data, JobsParameter jobsParameter)
-            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+        throws NumberFormatException, IOException {
         JsonParser parser = new JsonFactory().createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
             String jobURI;
             String correlationID;
             String dataAttribute;
-            Boolean sendOutput;
+            boolean sendOutput;
 
             while (parser.nextToken() != JsonToken.END_OBJECT) {
                 String fieldName = parser.getCurrentName();
@@ -155,7 +155,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
                 } else if ("correlationID".equals(fieldName)) {
                     correlationID = parser.getText();
                     jobsParameter.setCorrelationID(correlationID);
-                }else if ("data".equals(fieldName)) {
+                } else if ("data".equals(fieldName)) {
                     dataAttribute = parser.getText();
                     jobsParameter.setData(dataAttribute);
                 }
@@ -166,7 +166,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
 
     @Override
     public void deserializeLogParameter(byte[] data, LogParameter logParameter)
-            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+        throws NumberFormatException, IOException {
         JsonParser parser = new JsonFactory().createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
             String level;
@@ -182,11 +182,11 @@ class JsonMessageFormat implements CloudioMessageFormat {
     }
 
     @Override
-    public byte[] serializeCloudioLog(CloudioLogMessage cloudioLogMessage) {
+    public byte[] serializeCloudioLogMessage(CloudioLogMessage cloudioLogMessage) {
         ByteArrayBuilder outputStream = new ByteArrayBuilder();
         try {
             JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
-            serializeCloudioLog(cloudioLogMessage, generator);
+            serializeCloudioLogMessage(cloudioLogMessage, generator);
             generator.flush();
         } catch (IOException exception) {
             log.error("Exception: " + exception.getMessage());
@@ -212,16 +212,14 @@ class JsonMessageFormat implements CloudioMessageFormat {
     private void serializeNode(CloudioNode.InternalNode node, JsonGenerator generator) throws IOException {
         generator.writeStartObject();
 
-        Set<String> interfaces = node.getInterfaces();
         generator.writeArrayFieldStart("implements");
         for (String interface_ : node.getInterfaces()) {
             generator.writeString(interface_);
         }
         generator.writeEndArray();
 
-        List<CloudioObject.InternalObject> objects = node.getObjects().toList();
         generator.writeObjectFieldStart("objects");
-        for (CloudioObject.InternalObject object: objects) {
+        for (CloudioObject.InternalObject object : node.getObjects()) {
             serializeObject(object, generator);
         }
         generator.writeEndObject();
@@ -237,16 +235,14 @@ class JsonMessageFormat implements CloudioMessageFormat {
             generator.writeStringField("conforms", conforms);
         }
 
-        List<CloudioObject.InternalObject> objects = object.getObjects().toList();
         generator.writeObjectFieldStart("objects");
-        for (CloudioObject.InternalObject childObject: objects) {
+        for (CloudioObject.InternalObject childObject : object.getObjects()) {
             serializeObject(childObject, generator);
         }
         generator.writeEndObject();
 
-        List<CloudioAttribute.InternalAttribute> attributes = object.getAttributes().toList();
         generator.writeObjectFieldStart("attributes");
-        for (CloudioAttribute.InternalAttribute attribute: attributes) {
+        for (CloudioAttribute<?>.InternalAttribute attribute : object.getAttributes()) {
             generator.writeFieldName(attribute.getName());
             serializeAttribute(attribute, generator);
         }
@@ -255,7 +251,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
         generator.writeEndObject();
     }
 
-    private void serializeAttribute(CloudioAttribute.InternalAttribute attribute, JsonGenerator generator) throws IOException {
+    private void serializeAttribute(CloudioAttribute<?>.InternalAttribute attribute, JsonGenerator generator) throws IOException {
         generator.writeStartObject();
 
         generator.writeStringField("type", attribute.getType().toString());
@@ -269,7 +265,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
             }
         }
 
-        java.lang.Object value = attribute.getValue();
+        Object value = attribute.getValue();
         if (value != null) {
             generator.writeObjectField("value", attribute.getValue());
         }
@@ -280,9 +276,8 @@ class JsonMessageFormat implements CloudioMessageFormat {
     private void serializeTransaction(Transaction transaction, JsonGenerator generator) throws IOException {
         generator.writeStartObject();
 
-        List<CloudioAttribute.InternalAttribute> attributes = transaction.getAttributes();
         generator.writeObjectFieldStart("attributes");
-        for (CloudioAttribute.InternalAttribute attribute: attributes) {
+        for (CloudioAttribute<?>.InternalAttribute attribute : transaction.getAttributes()) {
             generator.writeFieldName(attribute.getUuid().toString());
             serializeAttribute(attribute, generator);
         }
@@ -293,10 +288,10 @@ class JsonMessageFormat implements CloudioMessageFormat {
     }
 
 
-    private void serializeCloudioLog(CloudioLogMessage cloudioLogMessage, JsonGenerator generator) throws IOException {
+    private void serializeCloudioLogMessage(CloudioLogMessage cloudioLogMessage, JsonGenerator generator) throws IOException {
         generator.writeStartObject();
 
-        generator.writeStringField("level", cloudioLogMessage.getLevel().toString());
+        generator.writeStringField("level", cloudioLogMessage.getLevel());
         generator.writeNumberField("timestamp", cloudioLogMessage.getTimestamp() / 1000.0);
         generator.writeStringField("message", cloudioLogMessage.getMessage());
         generator.writeStringField("loggerName", cloudioLogMessage.getLoggerName());
