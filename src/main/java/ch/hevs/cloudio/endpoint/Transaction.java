@@ -1,19 +1,18 @@
 package ch.hevs.cloudio.endpoint;
 
-import java.util.LinkedList;
 import java.util.List;
 
-public class Transaction {
-
-    private final List<CloudioAttribute.InternalAttribute> attributes =
-            new LinkedList<CloudioAttribute.InternalAttribute>();
+class Transaction {
+    private final UniqueItemSet<CloudioAttribute.InternalAttribute> attributes = new UniqueItemSet<>();
 
     public List<CloudioAttribute.InternalAttribute> getAttributes() {
-        return attributes;
+        return attributes.toList();
     }
 
-    public void addAttribute(CloudioAttribute.InternalAttribute attribute){
-        attributes.add(attribute);
+    public void addAttribute(CloudioAttribute.InternalAttribute attribute) {
+        try {
+            attributes.addItem(attribute);
+        } catch (DuplicateItemException ignored) {}
     }
 
     public void clearAttributes(){

@@ -129,13 +129,13 @@ public class CloudioAttribute<T> {
     }
 
     /**
-     * Tries to initialize the attribute with the given value for ad lib objects.
+     * Tries to initialize the attribute with the given value for dynamic objects.
      *
      * @param initialValue                              The value to initialize the attribute with.
      * @throws CloudioAttributeConstraintException      If the endpoint can not change the attribute.
      * @throws CloudioAttributeInitializationException  If the attribute is already initialized or the node is already online.
      */
-    void setInitialAdlibValue(T initialValue) throws CloudioAttributeConstraintException, CloudioAttributeInitializationException {
+    void setInitialDynamicValue(T initialValue) throws CloudioAttributeConstraintException, CloudioAttributeInitializationException {
         // Check constraint.
         internal.constraint.endpointWillInitializeAdLib();
 

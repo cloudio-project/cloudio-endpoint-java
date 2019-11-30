@@ -41,7 +41,7 @@ public abstract class CloudioNode {
                         // Add the object to the list of objects.
                         try {
                             objects.addItem(object.internal);
-                        } catch (DuplicateNamedItemException e) {
+                        } catch (DuplicateItemException e) {
                             throw new CloudioModificationException(
                                 "Duplicate name for fields, your Java compiler sucks ;-)");
                         }

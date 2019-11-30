@@ -266,7 +266,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
     }
 
     @Override
-    public void addNode(String nodeName, CloudioNode node) throws DuplicateNamedItemException {
+    public void addNode(String nodeName, CloudioNode node) throws DuplicateItemException {
         if (nodeName != null && node != null) {
             // Add node to endpoint.
             node.internal.setName(nodeName);
@@ -288,7 +288,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
     @Override
     public <T extends CloudioNode> T addNode(String nodeName, Class<T> nodeClass)
-            throws InvalidCloudioNodeException, DuplicateNamedItemException {
+            throws InvalidCloudioNodeException, DuplicateItemException {
         if (nodeName != null && nodeClass != null) {
             try {
                 // Create node instance.
@@ -468,8 +468,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
             String messageFormatId = configuration.getProperty(MESSAGE_FORMAT, MESSAGE_FORMAT_DEFAULT);
             if ("json".equals(messageFormatId)) {
                 messageFormat = new JsonMessageFormat();
-            } else if ("json+zip".equals(messageFormatId)) {
-                messageFormat = new JsonZipMessageFormat();
             } else {
                 throw new InvalidPropertyException("Unknown message format (ch.hevs.cloudio.endpoint.messageFormat): " +
                         "\"" + messageFormatId + "\"");
@@ -773,8 +771,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                         @Override
                                         public void run() {
                                             try {
-                                                @SuppressWarnings("unchecked")
-
                                                 DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
                                                 ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
 
