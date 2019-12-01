@@ -1,8 +1,5 @@
 package ch.hevs.cloudio.endpoint;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-
 class CloudioMessageFormatFactory {
     static CloudioMessageFormat json;
     static CloudioMessageFormat cbor;
@@ -10,11 +7,11 @@ class CloudioMessageFormatFactory {
     static CloudioMessageFormat massageFormat(int messageFormatId) {
         switch (messageFormatId) {
             case '{':
-                if (json == null) json = new JacksonMessageFormat(new JsonFactory());
+                if (json == null) json = new GenericJacksonMessageFormat.JSON();
                 return json;
 
             case 'c':
-                if (cbor == null) cbor = new JacksonMessageFormat(new CBORFactory());
+                if (cbor == null) cbor = new GenericJacksonMessageFormat.CBOR();
                 return cbor;
 
             default:
@@ -25,11 +22,11 @@ class CloudioMessageFormatFactory {
     static CloudioMessageFormat messageFormat(String messageFormatName) {
         switch (messageFormatName) {
             case "json":
-                if (json == null) json = new JacksonMessageFormat(new JsonFactory());
+                if (json == null) json = new GenericJacksonMessageFormat.JSON();
                 return json;
 
             case "cbor":
-                if (cbor == null) cbor = new JacksonMessageFormat(new CBORFactory());
+                if (cbor == null) cbor = new GenericJacksonMessageFormat.CBOR();
                 return cbor;
 
             default:

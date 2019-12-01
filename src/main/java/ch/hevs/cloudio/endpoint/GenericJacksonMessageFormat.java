@@ -2,6 +2,7 @@ package ch.hevs.cloudio.endpoint;
 
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.core.util.ByteArrayBuilder;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -11,11 +12,23 @@ import java.io.IOException;
  * Encodes messages using the Jackson serialization API. The actual format is determined by the passed factory instance. If a JsonFactory object is passed,
  * JSON is used to serialize the data, if a CBORFactory object is passed the format used will be CBOR.
  */
-class JacksonMessageFormat implements CloudioMessageFormat {
-    private final Logger log = LogManager.getLogger(JacksonMessageFormat.class);
+class GenericJacksonMessageFormat implements CloudioMessageFormat {
+    static class JSON extends GenericJacksonMessageFormat {
+        JSON() {
+            super(new JsonFactory());
+        }
+    }
+
+    static class CBOR extends GenericJacksonMessageFormat {
+        CBOR() {
+            super(new CBORFactory());
+        }
+    }
+
+    private final Logger log = LogManager.getLogger(GenericJacksonMessageFormat.class);
     private final JsonFactory factory;
 
-    JacksonMessageFormat(JsonFactory factory) {
+    GenericJacksonMessageFormat(JsonFactory factory) {
         this.factory = factory;
     }
 
@@ -286,7 +299,6 @@ class JacksonMessageFormat implements CloudioMessageFormat {
         generator.writeEndObject();
 
     }
-
 
     private void serializeCloudioLogMessage(CloudioLogMessage cloudioLogMessage, JsonGenerator generator) throws IOException {
         generator.writeStartObject();
