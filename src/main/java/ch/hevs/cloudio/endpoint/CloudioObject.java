@@ -3,7 +3,9 @@ package ch.hevs.cloudio.endpoint;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.util.Stack;
 
@@ -15,7 +17,7 @@ import java.util.Stack;
  * a scheme what attributes and child objects an object has to have. An object is conform to such a scheme if it
  * matches exactly the structure of the class. It can not contain more attributes or child objects, then it would be
  * not anymore conform to that class.
- *
+ * <p>
  * Todo: Add example code.
  */
 public class CloudioObject {
@@ -28,9 +30,8 @@ public class CloudioObject {
         private CloudioObjectContainer parent = null;
         private String name;
         private String conforms = null;
-        private final NamedItemSet<InternalObject> objects = new NamedItemSet<InternalObject>();
-        private final NamedItemSet<CloudioAttribute.InternalAttribute> attributes =
-            new NamedItemSet<CloudioAttribute.InternalAttribute>();
+        private final NamedItemSet<InternalObject> objects = new NamedItemSet<>();
+        private final NamedItemSet<CloudioAttribute.InternalAttribute> attributes = new NamedItemSet<>();
         private boolean staticAttributesAdded = false;
 
         public InternalObject() {
@@ -40,7 +41,7 @@ public class CloudioObject {
                     // If the field extends cloud.io CloudioObject abstract class...
                     if (CloudioObject.class.isAssignableFrom(field.getType())) {
                         // ... create an instance of the object.
-                        CloudioObject object = (CloudioObject)field.getType().newInstance();
+                        CloudioObject object = (CloudioObject) field.getType().getDeclaredConstructor().newInstance();
 
                         // Set the name and the parent of the object.
                         object.internal.setName(field.getName());
@@ -60,17 +61,17 @@ public class CloudioObject {
                     // If the field extends CloudioAttribute abstract class...
                     else if (CloudioAttribute.class.isAssignableFrom(field.getType())) {
                         // ... create an instance of the attribute.
-                        CloudioAttribute attribute = (CloudioAttribute)field.getType().newInstance();
+                        CloudioAttribute attribute = (CloudioAttribute) field.getType().getDeclaredConstructor().newInstance();
 
                         // Set the name and the parent of the attribute.
                         attribute.internal.setType(
-                                ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0]);
+                            ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0]);
                         attribute.internal.setName(field.getName());
                         attribute.internal.setParent(this);
 
                         if (field.getAnnotation(StaticAttribute.class) != null) {
                             throw new InvalidCloudioAttributeException("Static attributes should not be of type Attribute, " +
-                                    "use native types for static attributes.");
+                                "use native types for static attributes.");
                         } else if (field.getAnnotation(Parameter.class) != null) {
                             attribute.internal.setConstraint(CloudioAttributeConstraint.Parameter);
                         } else if (field.getAnnotation(Status.class) != null) {
@@ -103,15 +104,22 @@ public class CloudioObject {
                             field.getType() != long.class &&
                             field.getType() != float.class &&
                             field.getType() != double.class &&
-                            field.getType() != String.class) {
+                            field.getType() != String.class &&
+                            field.getType() != boolean[].class &&
+                            field.getType() != short[].class &&
+                            field.getType() != int[].class &&
+                            field.getType() != long[].class &&
+                            field.getType() != float[].class &&
+                            field.getType() != double[].class &&
+                            field.getType() != String[].class) {
                             throw new InvalidCloudioAttributeException(field.getType());
                         }
                     }
                 }
-            } catch (InstantiationException e) {
+            } catch (InstantiationException | IllegalAccessException e) {
                 throw new InvalidCloudioObjectException(e);
-            } catch (IllegalAccessException e) {
-                throw new InvalidCloudioObjectException(e);
+            } catch (NoSuchMethodException | InvocationTargetException e) {
+                e.printStackTrace();
             }
 
             // If the object class declares conformance, add it.
@@ -155,7 +163,7 @@ public class CloudioObject {
             // If the object already has a parent (we are moving the object) then fail with a runtime exception.
             if (this.parent != null) {
                 throw new CloudioModificationException("The parent of an Object can never be changed " +
-                        "(Objects can not be moved)!");
+                    "(Objects can not be moved)!");
             }
 
             // Set the parent.
@@ -189,10 +197,7 @@ public class CloudioObject {
                                     throw new CloudioModificationException("Duplicate name for fields, " +
                                         "your Java compiler sucks ;-)");
                                 }
-                            } catch (InvalidCloudioAttributeException exception) {
-                                log.error("Exception: " + exception.getMessage());
-                                exception.printStackTrace();
-                            } catch (IllegalAccessException exception) {
+                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
                                 log.error("Exception: " + exception.getMessage());
                                 exception.printStackTrace();
                             }
@@ -219,10 +224,7 @@ public class CloudioObject {
                                     throw new CloudioModificationException("Duplicate name for fields, " +
                                         "your Java compiler sucks ;-)");
                                 }
-                            } catch (InvalidCloudioAttributeException exception) {
-                                log.error("Exception: " + exception.getMessage());
-                                exception.printStackTrace();
-                            } catch (IllegalAccessException exception) {
+                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
                                 log.error("Exception: " + exception.getMessage());
                                 exception.printStackTrace();
                             }
@@ -248,10 +250,7 @@ public class CloudioObject {
                                     throw new CloudioModificationException("Duplicate name for fields, " +
                                         "your Java compiler sucks ;-)");
                                 }
-                            } catch (InvalidCloudioAttributeException exception) {
-                                log.error("Exception: " + exception.getMessage());
-                                exception.printStackTrace();
-                            } catch (IllegalAccessException exception) {
+                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
                                 log.error("Exception: " + exception.getMessage());
                                 exception.printStackTrace();
                             }
@@ -276,10 +275,116 @@ public class CloudioObject {
                                     throw new CloudioModificationException("Duplicate name for fields, " +
                                         "your Java compiler sucks ;-)");
                                 }
-                            } catch (InvalidCloudioAttributeException exception) {
+                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
                                 log.error("Exception: " + exception.getMessage());
                                 exception.printStackTrace();
-                            } catch (IllegalAccessException exception) {
+                            }
+                        } else if (field.getType() == boolean[].class) {
+                            CloudioAttribute<boolean[]>.InternalAttribute attribute = new CloudioAttribute<boolean[]>().internal;
+                            try {
+                                attribute.setConstraint(CloudioAttributeConstraint.Static);
+                                attribute.setType(Boolean[].class);
+                                attribute.setName(field.getName());
+                                attribute.setParent(this);
+                                try {
+                                    attribute.setStaticValue((boolean[]) field.get(CloudioObject.this));
+                                } catch (CloudioAttributeConstraintException exception) {
+                                    log.error("Exception: " + exception.getMessage());
+                                    exception.printStackTrace();
+                                }
+                                try {
+                                    attributes.addItem(attribute);
+                                } catch (DuplicateItemException e) {
+                                    throw new CloudioModificationException("Duplicate name for fields, " +
+                                        "your Java compiler sucks ;-)");
+                                }
+                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
+                                log.error("Exception: " + exception.getMessage());
+                                exception.printStackTrace();
+                            }
+
+                            // ...of a supported integer type, then create a integer attribute on the fly.
+                        } else if (field.getType() == short[].class || field.getType() == int[].class ||
+                            field.getType() == long[].class) {
+                            CloudioAttribute<long[]>.InternalAttribute attribute = new CloudioAttribute<long[]>().internal;
+                            try {
+                                attribute.setConstraint(CloudioAttributeConstraint.Static);
+                                attribute.setType(Long[].class);
+                                attribute.setName(field.getName());
+                                attribute.setParent(this);
+                                try {
+                                    Object value = field.get(CloudioObject.this);
+                                    long[] longs = new long[Array.getLength(value)];
+                                    for (int i = 0; i < longs.length; ++i) {
+                                        longs[i] = ((Number) Array.get(value, i)).longValue();
+                                    }
+                                    attribute.setStaticValue(longs);
+                                } catch (CloudioAttributeConstraintException exception) {
+                                    log.error("Exception: " + exception.getMessage());
+                                    exception.printStackTrace();
+                                }
+                                try {
+                                    attributes.addItem(attribute);
+                                } catch (DuplicateItemException e) {
+                                    throw new CloudioModificationException("Duplicate name for fields, " +
+                                        "your Java compiler sucks ;-)");
+                                }
+                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
+                                log.error("Exception: " + exception.getMessage());
+                                exception.printStackTrace();
+                            }
+
+                            // ...of a supported floating point type, then create a number attribute on the fly.
+                        } else if (field.getType() == float[].class || field.getType() == double[].class) {
+                            CloudioAttribute<double[]>.InternalAttribute attribute = new CloudioAttribute<double[]>().internal;
+                            try {
+                                attribute.setConstraint(CloudioAttributeConstraint.Static);
+                                attribute.setType(Double[].class);
+                                attribute.setName(field.getName());
+                                attribute.setParent(this);
+                                try {
+                                    Object value = field.get(CloudioObject.this);
+                                    double[] doubles = new double[Array.getLength(value)];
+                                    for (int i = 0; i < doubles.length; ++i) {
+                                        doubles[i] = ((Number) Array.get(value, i)).doubleValue();
+                                    }
+                                    attribute.setStaticValue(doubles);
+                                } catch (CloudioAttributeConstraintException exception) {
+                                    log.error("Exception: " + exception.getMessage());
+                                    exception.printStackTrace();
+                                }
+                                try {
+                                    attributes.addItem(attribute);
+                                } catch (DuplicateItemException exception) {
+                                    throw new CloudioModificationException("Duplicate name for fields, " +
+                                        "your Java compiler sucks ;-)");
+                                }
+                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
+                                log.error("Exception: " + exception.getMessage());
+                                exception.printStackTrace();
+                            }
+
+                            // ...of string type, then create a String attribute on the fly.
+                        } else if (field.getType() == String[].class) {
+                            CloudioAttribute<String[]>.InternalAttribute attribute = new CloudioAttribute<String[]>().internal;
+                            try {
+                                attribute.setConstraint(CloudioAttributeConstraint.Static);
+                                attribute.setType(String[].class);
+                                attribute.setName(field.getName());
+                                attribute.setParent(this);
+                                try {
+                                    attribute.setStaticValue((String[]) field.get(CloudioObject.this));
+                                } catch (CloudioAttributeConstraintException exception) {
+                                    log.error("Exception: " + exception.getMessage());
+                                    exception.printStackTrace();
+                                }
+                                try {
+                                    attributes.addItem(attribute);
+                                } catch (DuplicateItemException exception) {
+                                    throw new CloudioModificationException("Duplicate name for fields, " +
+                                        "your Java compiler sucks ;-)");
+                                }
+                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
                                 log.error("Exception: " + exception.getMessage());
                                 exception.printStackTrace();
                             }
@@ -379,12 +484,12 @@ public class CloudioObject {
         void close() {
             parent = null;
 
-            for (CloudioObject.InternalObject object: objects) {
+            for (CloudioObject.InternalObject object : objects) {
                 object.close();
             }
             objects.clear();
 
-            for (CloudioAttribute.InternalAttribute attribute: attributes) {
+            for (CloudioAttribute.InternalAttribute attribute : attributes) {
                 attribute.close();
             }
             attributes.clear();

@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 
 /**
  * Encodes messages using the Jackson serialization API. The actual format is determined by the passed factory instance. If a JsonFactory object is passed,
@@ -280,7 +281,15 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
 
         Object value = attribute.getValue();
         if (value != null) {
-            generator.writeObjectField("value", attribute.getValue());
+            if (value.getClass().isArray()) {
+                generator.writeArrayFieldStart("value");
+                for (int i = 0; i < Array.getLength(value); ++i) {
+                    generator.writeObject(Array.get(value, i));
+                }
+                generator.writeEndArray();
+            } else {
+                generator.writeObjectField("value", value);
+            }
         }
 
         generator.writeEndObject();
