@@ -316,17 +316,14 @@ public class CloudioObject {
         @Override
         public CloudioAttribute.InternalAttribute findAttribute(Stack<String> location) {
             if (!location.isEmpty()) {
-                if ("objects".equals(location.peek())) {
-                    location.pop();
-                    if (!location.isEmpty()) {
-                        CloudioObject.InternalObject object = getObjects().getItem(location.pop());
-                        if (object != null) {
-                            return object.findAttribute(location);
-                        }
+                if (location.size()>1) {
+                    CloudioObject.InternalObject object = getObjects().getItem(location.pop());
+                    if (object != null) {
+                        return object.findAttribute(location);
                     }
-                } else if ("attributes".equals(location.peek())) {
+                }
+                else {
                     getAttributes();
-                    location.pop();
                     if (!location.isEmpty()) {
                         CloudioAttribute.InternalAttribute attribute = getAttributes().getItem(location.pop());
                         if (attribute != null && location.isEmpty()) {

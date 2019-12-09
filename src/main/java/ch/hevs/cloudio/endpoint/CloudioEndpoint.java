@@ -920,9 +920,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private void set(String topic, Stack<String> location, CloudioMessageFormat messageFormat, byte[] data)
                 throws Exception {
             // The path to the location must be start with the actual UUID of the endpoint.
-            if (!location.isEmpty() && uuid.equals(location.pop()) &&
-                    !location.isEmpty() && "nodes".equals(location.pop()) &&
-                    !location.isEmpty()) {
+            if (!location.isEmpty() && uuid.equals(location.pop()) && !location.isEmpty()) {
 
                 // Get the node with the name according to the topic.
                 CloudioNode.InternalNode node = nodes.getItem(location.peek());

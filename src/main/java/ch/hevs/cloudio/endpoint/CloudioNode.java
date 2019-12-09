@@ -116,7 +116,7 @@ public abstract class CloudioNode {
 
         @Override
         public CloudioAttribute.InternalAttribute findAttribute(Stack<String> location) {
-            if (!location.isEmpty() && "objects".equals(location.pop()) && !location.isEmpty()) {
+            if (!location.isEmpty()) {
                 CloudioObject.InternalObject object = getObjects().getItem(location.pop());
                 if (object != null) {
                     return object.findAttribute(location);
