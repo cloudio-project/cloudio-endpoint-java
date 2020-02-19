@@ -587,7 +587,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
 
             CloudioLogAppender cloudioLogAppender = new CloudioLogAppender("CloudioLogAppender", null);
-            cloudioLogAppender.setAppenderMqttParameters(mqtt, uuid, messageFormat);
+            cloudioLogAppender.setAppenderMqttParameters(mqtt, uuid, messageFormat, persistence, PERSISTENCE_FILE, PERSISTENCE_MAP_MQTT_MESSAGES);
 
             coreLogger.addAppender(cloudioLogAppender);
             cloudioLogAppender.start();

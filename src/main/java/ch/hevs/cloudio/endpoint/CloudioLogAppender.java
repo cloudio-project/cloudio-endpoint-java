@@ -12,6 +12,11 @@ import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
+
+import java.util.Calendar;
+import java.util.concurrent.ConcurrentMap;
 
 
 @Plugin(
@@ -23,6 +28,9 @@ public class CloudioLogAppender extends AbstractAppender {
     private MqttAsyncClient mqtt = null;
     private String uuid = null;
     private CloudioMessageFormat messageFormat = null;
+    private boolean persistence = false;
+    String PERSISTENCE_FILE;
+    String PERSISTENCE_MAP_MQTT_MESSAGES;
 
 
 
@@ -55,20 +63,45 @@ public class CloudioLogAppender extends AbstractAppender {
                             event.getSource().getMethodName()+
                             ", line:"+event.getSource().getLineNumber()
             );
-            try{
-                mqtt.publish("@logs/" + uuid,
-                        messageFormat.serializeCloudioLog(cloudioLogMessage), 1, false);
+
+            byte data[] = messageFormat.serializeCloudioLog(cloudioLogMessage);
+
+            // Try to send the message if the MQTT client is connected.
+            boolean messageSend = false;
+            if (mqtt.isConnected()) {
+                try {
+                    mqtt.publish("@logs/" + uuid, data, 1, false);
+                    messageSend = true;
+                } catch (MqttException exception) {
+                    exception.printStackTrace();
+                }
             }
-            catch (MqttException exception){
-                exception.printStackTrace();
+
+            // If the message could not be send for any reason, add the message to the pending updates persistence if
+            // available.
+            if (!messageSend && persistence) {
+                try {
+                    DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+                    ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
+                    map.put("PendingUpdate-@logs/" + uuid
+                                    + "-" + Calendar.getInstance().getTimeInMillis(),
+                            data);
+                    dbPersistenceData.close();
+
+                } catch (Exception exception) {
+                    exception.printStackTrace();
+                }
             }
         }
 
     }
 
-    public void setAppenderMqttParameters(MqttAsyncClient mqtt, String uuid, CloudioMessageFormat messageFormat){
+    public void setAppenderMqttParameters(MqttAsyncClient mqtt, String uuid, CloudioMessageFormat messageFormat, boolean persistence, String PERSISTENCE_FILE, String PERSISTENCE_MAP_MQTT_MESSAGES){
         this.mqtt = mqtt;
         this.uuid = uuid;
         this.messageFormat = messageFormat;
+        this.persistence = persistence;
+        this.PERSISTENCE_FILE = PERSISTENCE_FILE;
+        this.PERSISTENCE_MAP_MQTT_MESSAGES = PERSISTENCE_MAP_MQTT_MESSAGES;
     }
 }
