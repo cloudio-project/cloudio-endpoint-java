@@ -31,6 +31,7 @@ public class CloudioLogAppender extends AbstractAppender {
     private boolean persistence = false;
     String PERSISTENCE_FILE;
     String PERSISTENCE_MAP_MQTT_MESSAGES;
+    Object persistenceLock;
 
 
 
@@ -81,13 +82,14 @@ public class CloudioLogAppender extends AbstractAppender {
             // available.
             if (!messageSend && persistence) {
                 try {
-                    DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                    ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
-                    map.put("PendingUpdate-@logs/" + uuid
-                                    + "-" + Calendar.getInstance().getTimeInMillis(),
-                            data);
-                    dbPersistenceData.close();
-
+                    synchronized (persistenceLock) {
+                        DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).expireMaxSize(3).expireAfterUpdate().createOrOpen();
+                        map.put("PendingUpdate-@logs/" + uuid
+                                        + "-" + Calendar.getInstance().getTimeInMillis(),
+                                data);
+                        dbPersistenceData.close();
+                    }
                 } catch (Exception exception) {
                     exception.printStackTrace();
                 }
@@ -96,12 +98,13 @@ public class CloudioLogAppender extends AbstractAppender {
 
     }
 
-    public void setAppenderMqttParameters(MqttAsyncClient mqtt, String uuid, CloudioMessageFormat messageFormat, boolean persistence, String PERSISTENCE_FILE, String PERSISTENCE_MAP_MQTT_MESSAGES){
+    public void setAppenderMqttParameters(MqttAsyncClient mqtt, String uuid, CloudioMessageFormat messageFormat, boolean persistence, String PERSISTENCE_FILE, String PERSISTENCE_MAP_MQTT_MESSAGES, Object persistenceLock){
         this.mqtt = mqtt;
         this.uuid = uuid;
         this.messageFormat = messageFormat;
         this.persistence = persistence;
         this.PERSISTENCE_FILE = PERSISTENCE_FILE;
         this.PERSISTENCE_MAP_MQTT_MESSAGES = PERSISTENCE_MAP_MQTT_MESSAGES;
+        this.persistenceLock = persistenceLock;
     }
 }

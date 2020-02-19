@@ -428,6 +428,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private boolean inTransaction = false;
         private Transaction transaction = new Transaction();
 
+        private Object persistenceLock = new Object();
+
         public InternalEndpoint(String uuid, CloudioEndpointConfiguration configuration, CloudioEndpointListener listener)
                 throws InvalidUuidException, InvalidPropertyException, CloudioEndpointInitializationException {
 
@@ -567,27 +569,28 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 jobsFilePath = "etc/cloud.io";
             }
 
-            //Initialize the cloud.iO persistence file
-            DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-            ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
-            dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
-            String logLevel = (String)map.getOrDefault(PERSISTENCE_LOG_LEVEL,"");
-            if(logLevel.equals("")) {
-                map.put(PERSISTENCE_LOG_LEVEL, "ERROR");
-                Configurator.setRootLevel(Level.ERROR);
+            synchronized (persistenceLock) {
+                //Initialize the cloud.iO persistence file
+                DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+                ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
+                dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).expireMaxSize(3).expireAfterUpdate().createOrOpen();
+                String logLevel = (String) map.getOrDefault(PERSISTENCE_LOG_LEVEL, "");
+                if (logLevel.equals("")) {
+                    map.put(PERSISTENCE_LOG_LEVEL, "ERROR");
+                    Configurator.setRootLevel(Level.ERROR);
+                } else {
+                    Level log4jLevel = Level.getLevel(logLevel);
+                    Configurator.setRootLevel(log4jLevel);
+                }
+                dbPersistenceData.close();
             }
-            else{
-                Level log4jLevel = Level.getLevel(logLevel);
-                Configurator.setRootLevel(log4jLevel);
-            }
-            dbPersistenceData.close();
 
             //Create the CloudioLogAppender and give the mqtt object to it
             org.apache.logging.log4j.core.Logger coreLogger =
                     (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
 
             CloudioLogAppender cloudioLogAppender = new CloudioLogAppender("CloudioLogAppender", null);
-            cloudioLogAppender.setAppenderMqttParameters(mqtt, uuid, messageFormat, persistence, PERSISTENCE_FILE, PERSISTENCE_MAP_MQTT_MESSAGES);
+            cloudioLogAppender.setAppenderMqttParameters(mqtt, uuid, messageFormat, persistence, PERSISTENCE_FILE, PERSISTENCE_MAP_MQTT_MESSAGES, persistenceLock);
 
             coreLogger.addAppender(cloudioLogAppender);
             cloudioLogAppender.start();
@@ -623,12 +626,21 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 // available.
                 if (!messageSend && persistence) {
                     try {
-                        DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
-                        map.put("PendingUpdate-@update/" + attribute.getUuid().toString()
-                                        + "-" + Calendar.getInstance().getTimeInMillis(),
-                                data);
-                        dbPersistenceData.close();
+                        System.out.println("add update in persitence");
+                        synchronized (persistenceLock) {
+                            DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+                            ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).expireMaxSize(3).expireAfterUpdate().createOrOpen();
+
+                            Set<String> keys = map.keySet();
+                            for(String key: keys){
+                                System.out.print(key + ", ");
+                            }
+                            System.out.println(map);
+                            map.put("PendingUpdate-@update/" + attribute.getUuid().toString()
+                                            + "-" + Calendar.getInstance().getTimeInMillis(),
+                                    data);
+                            dbPersistenceData.close();
+                        }
 
                     } catch (Exception exception) {
                         log.error("Exception :" + exception.getMessage());
@@ -715,13 +727,13 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     try{
                         Level log4jLevel = Level.getLevel(logParameter.getLevel());
                         Configurator.setRootLevel(log4jLevel);
-
-                        //put loglevel in mapDB
-                        DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
-                        map.put(PERSISTENCE_LOG_LEVEL, logParameter.getLevel());
-                        dbPersistenceData.close();
-
+                        synchronized (persistenceLock) {
+                            //put loglevel in mapDB
+                            DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+                            ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
+                            map.put(PERSISTENCE_LOG_LEVEL, logParameter.getLevel());
+                            dbPersistenceData.close();
+                        }
                     }catch (Exception e){
                         log.error("Level \"" + logParameter.getLevel() + "\" not supported!");
                         e.printStackTrace();
@@ -753,6 +765,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     IMqttToken token = mqtt.connect(options, null, new IMqttActionListener() {
                         @Override
                         public void onSuccess(IMqttToken iMqttToken) {
+                            System.out.println("onSuccess");
                             try {
                                 // Send birth message.
                                 mqtt.publish("@online/" + internal.uuid,
@@ -770,44 +783,49 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                     new Thread(new Runnable() {
                                         @Override
                                         public void run() {
+                                            DB dbPersistenceData = null;
                                             try {
-                                                DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                                                ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
+                                                synchronized (persistenceLock) {
+                                                    dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+                                                    ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).expireMaxSize(3).expireAfterUpdate().createOrOpen();
 
-                                                Set<String> keys = map.keySet();
+                                                    Set<String> keys = map.keySet();
 
-                                                while (mqtt.isConnected() && !keys.isEmpty()){
-                                                    String key = (String)keys.toArray()[0];
+                                                    while (mqtt.isConnected() && !keys.isEmpty()) {
+                                                        String key = (String) keys.toArray()[0];
 
-                                                    // Is it a pending update?
-                                                    if (key.startsWith("PendingUpdate-")) {
+                                                        // Is it a pending update?
+                                                        if (key.startsWith("PendingUpdate-")) {
 
-                                                        // Get the pending update persistent object from store.
-                                                        byte[] data = (byte[])map.get(key);
-                                                        String topic = key.substring(14, key.lastIndexOf("-"));
+                                                            // Get the pending update persistent object from store.
+                                                            byte[] data = (byte[]) map.get(key);
+                                                            String topic = key.substring(14, key.lastIndexOf("-"));
 
-                                                        // Try to send the update to the broker and remove it from the storage.
-                                                        try {
-                                                            mqtt.publish(topic,data, 1, true);
-                                                            map.remove(key);
-                                                        } catch (MqttException exception) {
-                                                            log.error("Exception: " + exception.getMessage());
-                                                            exception.printStackTrace();
-                                                        }
+                                                            // Try to send the update to the broker and remove it from the storage.
+                                                            try {
+                                                                mqtt.publish(topic, data, 1, true);
+                                                                map.remove(key);
+                                                            } catch (MqttException exception) {
+                                                                log.error("Exception: " + exception.getMessage());
+                                                                exception.printStackTrace();
+                                                            }
 
-                                                        try {
-                                                            Thread.sleep(100);
-                                                        } catch (InterruptedException exception) {
-                                                            log.error("Exception: " + exception.getMessage());
-                                                            exception.printStackTrace();
+                                                            try {
+                                                                Thread.sleep(100);
+                                                            } catch (InterruptedException exception) {
+                                                                log.error("Exception: " + exception.getMessage());
+                                                                exception.printStackTrace();
+                                                            }
                                                         }
                                                     }
+                                                    dbPersistenceData.close();
                                                 }
 
-                                                dbPersistenceData.close();
-
                                             } catch (Exception exception) {
-                                                log.error("Exception: " + exception.getMessage());
+                                                if(dbPersistenceData!=null)
+                                                    if(!dbPersistenceData.isClosed())
+                                                        dbPersistenceData.close();
+                                                //log.error("Exception: " + exception.getMessage());
                                                 exception.printStackTrace();
                                             }
 
@@ -969,12 +987,14 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 // available.
                 if (!messageSend && persistence) {
                     try {
-                        DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
-                        map.put("PendingUpdate-@transaction/" + uuid
-                                        + "-" + Calendar.getInstance().getTimeInMillis(),
-                                data);
-                        dbPersistenceData.close();
+                        synchronized (persistenceLock) {
+                            DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+                            ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).expireMaxSize(3).expireAfterUpdate().createOrOpen();
+                            map.put("PendingUpdate-@transaction/" + uuid
+                                            + "-" + Calendar.getInstance().getTimeInMillis(),
+                                    data);
+                            dbPersistenceData.close();
+                        }
 
                     } catch (Exception exception) {
                         log.error("Exception :" + exception.getMessage());
