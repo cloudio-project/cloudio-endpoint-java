@@ -84,7 +84,12 @@ public class CloudioLogAppender extends AbstractAppender {
                 try {
                     synchronized (persistenceLock) {
                         DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).expireMaxSize(3).expireAfterUpdate().createOrOpen();
+                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES)
+                                .expireMaxSize(3)
+                                .expireAfterGet()
+                                .expireAfterCreate()
+                                .expireAfterUpdate()
+                                .createOrOpen();
                         map.put("PendingUpdate-@logs/" + uuid
                                         + "-" + Calendar.getInstance().getTimeInMillis(),
                                 data);
