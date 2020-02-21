@@ -573,11 +573,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 //Initialize the cloud.iO persistence file
                 DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
                 ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
-                dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES)
-                        .expireMaxSize(3)
-                        .expireAfterGet()
-                        .expireAfterCreate()
-                        .expireAfterUpdate()
+                dbPersistenceData.treeMap(PERSISTENCE_MAP_MQTT_MESSAGES)
                         .createOrOpen();
                 String logLevel = (String) map.getOrDefault(PERSISTENCE_LOG_LEVEL, "");
                 if (logLevel.equals("")) {
@@ -634,21 +630,29 @@ public class CloudioEndpoint implements CloudioEndpointService {
                         System.out.println("add update in persitence");
                         synchronized (persistenceLock) {
                             DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                            ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES)
-                                    .expireMaxSize(3)
-                                    .expireAfterGet()
-                                    .expireAfterCreate()
-                                    .expireAfterUpdate()
+                            ConcurrentMap map = dbPersistenceData.treeMap(PERSISTENCE_MAP_MQTT_MESSAGES)
                                     .createOrOpen();
 
-
-                            map.put("PendingUpdate-@update/" + attribute.getUuid().toString()
-                                            + "-" + Calendar.getInstance().getTimeInMillis(),
+                            map.put(Calendar.getInstance().getTimeInMillis()+" "+"PendingUpdate @update/"
+                                            + attribute.getUuid().toString(),
                                     data);
-                            Set<String> keys = map.keySet();
-                            for(String key: keys){
-                                System.out.print(key + ", ");
+
+
+                            if(map.size()>5) {
+                                Set<String> keys = map.keySet();
+
+                                for(String key: keys){
+                                    if (map.size() > 5) {
+                                        map.remove(key);
+                                    }else {
+                                        break;
+                                    }
+                                }
                             }
+                            Set<String> keys = map.keySet();
+
+                            for(String key: keys)
+                                System.out.println(key);
 
                             System.out.println("Size of map = "+map.size());
                             dbPersistenceData.close();
@@ -798,11 +802,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                             try {
                                                 synchronized (persistenceLock) {
                                                     DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                                                    ConcurrentMap map  = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES)
-                                                            .expireMaxSize(3)
-                                                            .expireAfterGet()
-                                                            .expireAfterCreate()
-                                                            .expireAfterUpdate()
+                                                    ConcurrentMap map  = dbPersistenceData.treeMap(PERSISTENCE_MAP_MQTT_MESSAGES)
                                                             .createOrOpen();
 
                                                     Set<String> keys = map.keySet();
@@ -811,11 +811,12 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                         String key = (String) keys.toArray()[0];
 
                                                         // Is it a pending update?
-                                                        if (key.startsWith("PendingUpdate-")) {
+                                                        if (key.contains("PendingUpdate")) {
 
                                                             // Get the pending update persistent object from store.
                                                             byte[] data = (byte[]) map.get(key);
-                                                            String topic = key.substring(14, key.lastIndexOf("-"));
+                                                            String topic = key.split(" ")[2];
+                                                            //key.substring(14, key.lastIndexOf("-"))
 
                                                             // Try to send the update to the broker and remove it from the storage.
                                                             try {
@@ -1002,14 +1003,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     try {
                         synchronized (persistenceLock) {
                             DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                            ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES)
-                                    .expireMaxSize(3)
-                                    .expireAfterGet()
-                                    .expireAfterCreate()
-                                    .expireAfterUpdate()
+                            ConcurrentMap map = dbPersistenceData.treeMap(PERSISTENCE_MAP_MQTT_MESSAGES)
                                     .createOrOpen();
-                            map.put("PendingUpdate-@transaction/" + uuid
-                                            + "-" + Calendar.getInstance().getTimeInMillis(),
+                            map.put(Calendar.getInstance().getTimeInMillis()+" "+"PendingUpdate @transaction/" + uuid,
                                     data);
                             dbPersistenceData.close();
                         }
