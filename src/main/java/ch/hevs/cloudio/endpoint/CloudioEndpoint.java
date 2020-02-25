@@ -1024,21 +1024,23 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
 
         private void addMessageToPersistence(String label, String MapKey, int persistenceLimit, byte[] data){
-            synchronized (persistenceLock) {
-                DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                ConcurrentMap map = dbPersistenceData.treeMap(MapKey)
-                        .createOrOpen();
+            if(persistenceLimit<0) {
+                synchronized (persistenceLock) {
+                    DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
+                    ConcurrentMap map = dbPersistenceData.treeMap(MapKey)
+                            .createOrOpen();
 
-                map.put(label, data);
+                    map.put(label, data);
 
-                if(map.size()>persistenceLimit) {
-                    Iterator<String> keysItr = map.keySet().iterator();
+                    if (map.size() > persistenceLimit) {
+                        Iterator<String> keysItr = map.keySet().iterator();
 
-                    while(keysItr.hasNext() && map.size() > persistenceLimit){
-                        map.remove(keysItr.next());
+                        while (keysItr.hasNext() && map.size() > persistenceLimit) {
+                            map.remove(keysItr.next());
+                        }
                     }
+                    dbPersistenceData.close();
                 }
-                dbPersistenceData.close();
             }
         }
 
