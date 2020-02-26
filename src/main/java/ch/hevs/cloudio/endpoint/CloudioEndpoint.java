@@ -842,7 +842,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                 }
 
                                             } catch (Exception exception) {
-                                                //log.error("Exception: " + exception.getMessage());
+                                                log.error("Exception: " + exception.getMessage());
                                                 exception.printStackTrace();
                                             }
 
@@ -1078,7 +1078,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         @Override
         public void logDelegate(CloudioLogMessage cloudioLogMessage) {
 
-            byte data[] = messageFormat.serializeCloudioLog(cloudioLogMessage);
+            byte[] data = messageFormat.serializeCloudioLog(cloudioLogMessage);
 
             // Try to send the message if the MQTT client is connected.
             boolean messageSend = false;
@@ -1108,7 +1108,5 @@ public class CloudioEndpoint implements CloudioEndpointService {
             super.finalize();
             close();
         }
-
-
     }
 }
