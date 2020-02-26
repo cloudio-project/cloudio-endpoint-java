@@ -799,36 +799,42 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                             try {
                                                 synchronized (persistenceLock) {
                                                     DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                                                    ConcurrentMap map  = dbPersistenceData.treeMap(PERSISTENCE_MAP_MQTT_UPDATE)
-                                                            .createOrOpen();
 
-                                                    Set<String> keys = map.keySet();
+                                                    String treeMapNames[] = {PERSISTENCE_MAP_MQTT_UPDATE,
+                                                                            PERSISTENCE_MAP_MQTT_LOG};
+                                                    for(String treeMapName: treeMapNames) {
 
-                                                    while (mqtt.isConnected() && !keys.isEmpty()) {
-                                                        String key = (String) keys.toArray()[0];
+                                                        ConcurrentMap map = dbPersistenceData.treeMap(treeMapName)
+                                                                .createOrOpen();
 
-                                                        // Is it a pending update?
-                                                        if (key.contains("PendingUpdate")) {
+                                                        Set<String> keys = map.keySet();
 
-                                                            // Get the pending update persistent object from store.
-                                                            byte[] data = (byte[]) map.get(key);
-                                                            String topic = key.split(" ")[2];
-                                                            //key.substring(14, key.lastIndexOf("-"))
+                                                        while (mqtt.isConnected() && !keys.isEmpty()) {
+                                                            String key = (String) keys.toArray()[0];
 
-                                                            // Try to send the update to the broker and remove it from the storage.
-                                                            try {
-                                                                mqtt.publish(topic, data, 1, true);
-                                                                map.remove(key);
-                                                            } catch (MqttException exception) {
-                                                                log.error("Exception: " + exception.getMessage());
-                                                                exception.printStackTrace();
-                                                            }
+                                                            // Is it a pending update?
+                                                            if (key.contains("PendingUpdate")) {
 
-                                                            try {
-                                                                Thread.sleep(100);
-                                                            } catch (InterruptedException exception) {
-                                                                log.error("Exception: " + exception.getMessage());
-                                                                exception.printStackTrace();
+                                                                // Get the pending update persistent object from store.
+                                                                byte[] data = (byte[]) map.get(key);
+                                                                String topic = key.split(" ")[2];
+                                                                //key.substring(14, key.lastIndexOf("-"))
+
+                                                                // Try to send the update to the broker and remove it from the storage.
+                                                                try {
+                                                                    mqtt.publish(topic, data, 1, true);
+                                                                    map.remove(key);
+                                                                } catch (MqttException exception) {
+                                                                    log.error("Exception: " + exception.getMessage());
+                                                                    exception.printStackTrace();
+                                                                }
+
+                                                                try {
+                                                                    Thread.sleep(100);
+                                                                } catch (InterruptedException exception) {
+                                                                    log.error("Exception: " + exception.getMessage());
+                                                                    exception.printStackTrace();
+                                                                }
                                                             }
                                                         }
                                                     }
