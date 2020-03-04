@@ -91,16 +91,16 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
 
     @Override
     public synchronized void addPersistentUpdate(String key, byte[] data){
-        addPersistentLogMessage(key, mqttLogMap, updatePersistenceLimit, data);
+        addPersistentLogMessage(key, mqttUpdateMap, updatePersistenceLimit, data);
     }
 
     @Override
     public synchronized void addPersistentLog(String key, byte[] data){
-        addPersistentLogMessage(key, mqttUpdateMap, logPersistenceLimit, data);
+        addPersistentLogMessage(key, mqttLogMap, logPersistenceLimit, data);
     }
 
     private void addPersistentLogMessage(String key, ConcurrentMap map, int persistenceLimit, byte[] data){
-        if(persistenceLimit<0) {
+        if(persistenceLimit>0) {
             synchronized (dbPersistenceData) {
 
                 map.put(key, data);
