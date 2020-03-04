@@ -388,6 +388,10 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MQTT_PERSISTENCE_FALSE          = "false";
         private static final String MQTT_PERSISTENCE_PROPERTY       = "ch.hevs.cloudio.endpoint.persistence";
         private static final String MQTT_PERSISTENCE_DEFAULT        = MQTT_PERSISTENCE_TRUE;
+        private static final String MQTT_PERSISTENCE_QUEUE_FIFO     = "FIFO";
+        private static final String MQTT_PERSISTENCE_QUEUE_LIFO     = "LIFO";
+        private static final String MQTT_PERSISTENCE_QUEUE_PROPERTY = "ch.hevs.cloudio.endpoint.persistence-queue-type";
+        private static final String MQTT_PERSISTENCE_QUEUE_DEFAULT  = MQTT_PERSISTENCE_QUEUE_LIFO;
         private static final String MQTT_UPDATE_LIMIT_PROPERTY      = "ch.hevs.cloudio.endpoint.update-persistence-limit";
         private static final String MQTT_UPDATE_LIMIT_DEFAULT       = "10000";
         private static final String MQTT_LOG_LIMIT_PROPERTY         = "ch.hevs.cloudio.endpoint.log-persistence-limit";
@@ -427,6 +431,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private int retryInterval;
         private final MqttAsyncClient mqtt;
         private final boolean persistence;
+        private final boolean persistenceQueueFifo;
         private int updatePersistenceLimit;
         private int logPersistenceLimit;
         private final CloudioMessageFormat messageFormat;
@@ -552,9 +557,21 @@ public class CloudioEndpoint implements CloudioEndpointService {
                         "must be a valid integer number");
             }
 
-            // Create persistence object.
+            // Configure persistence
             String persistenceProvider = configuration.getProperty(MQTT_PERSISTENCE_PROPERTY, MQTT_PERSISTENCE_DEFAULT);
             persistence = persistenceProvider.equals(MQTT_PERSISTENCE_TRUE);
+
+            String persistenceQueueProvider = configuration.getProperty(MQTT_PERSISTENCE_QUEUE_PROPERTY, MQTT_PERSISTENCE_QUEUE_DEFAULT);
+
+            if(!persistenceQueueProvider.equals(MQTT_PERSISTENCE_QUEUE_FIFO) &&
+                    !persistenceQueueProvider.equals(MQTT_PERSISTENCE_QUEUE_LIFO)){
+                throw new InvalidPropertyException("Invalid persistence queue type" +
+                        "(ch.hevs.cloudio.endpoint.persistence-queue-type), " +
+                        "must be FIFO or LIFO");
+            }
+            else{
+                persistenceQueueFifo = persistenceQueueProvider.equals(MQTT_PERSISTENCE_QUEUE_FIFO);
+            }
 
             try {
                 updatePersistenceLimit = Integer.parseInt(
@@ -800,7 +817,11 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                             keys = cloudioPersistence.getPersistentLogKeySet();
 
                                                         while (mqtt.isConnected() && !keys.isEmpty()) {
-                                                            String key = (String) keys.toArray()[0];
+                                                            String key;
+                                                            if(persistenceQueueFifo)
+                                                                key = (String) keys.toArray()[0];
+                                                            else
+                                                                key = (String) keys.toArray()[keys.size()-1];
 
                                                             // Is it a pending update?
                                                             if (key.contains("PendingUpdate")) {
