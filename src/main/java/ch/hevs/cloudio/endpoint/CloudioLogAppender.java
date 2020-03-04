@@ -21,7 +21,7 @@ public class CloudioLogAppender extends AbstractAppender {
     LogAppenderDelegate logAppenderDelegate = null;
 
     public interface LogAppenderDelegate{
-        void logDelegate(CloudioLogMessage cloudioLogMessage );
+        void sendLogMessage(CloudioLogMessage cloudioLogMessage );
     }
 
     protected CloudioLogAppender(String name, Filter filter) {
@@ -54,7 +54,7 @@ public class CloudioLogAppender extends AbstractAppender {
                             ", line:"+event.getSource().getLineNumber()
             );
 
-            logAppenderDelegate.logDelegate(cloudioLogMessage);
+            logAppenderDelegate.sendLogMessage(cloudioLogMessage);
         }
     }
 
