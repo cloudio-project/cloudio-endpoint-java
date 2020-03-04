@@ -33,7 +33,7 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
     }
 
     @Override
-    public void openDatabase(){
+    public void open(){
         dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).transactionEnable().make();
         propertyMap = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
         mqttUpdateMap = dbPersistenceData.treeMap(PERSISTENCE_MAP_MQTT_UPDATE).createOrOpen();
@@ -42,7 +42,7 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
 
 
     @Override
-    public void closeDatabase(){
+    public void close(){
         dbPersistenceData.close();
     }
 

@@ -7,12 +7,12 @@ public interface CloudioPersistence {
     /**
      * Open the persistence database
      */
-    void openDatabase();
+    void open();
 
     /**
      * Close the persistence database
      */
-    void closeDatabase();
+    void close();
 
     /**
      * Set a property in the persistence database

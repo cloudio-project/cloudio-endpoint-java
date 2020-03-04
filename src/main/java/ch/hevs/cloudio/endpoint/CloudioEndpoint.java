@@ -6,8 +6,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.eclipse.paho.client.mqttv3.*;
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -16,7 +14,6 @@ import javax.net.ssl.TrustManagerFactory;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.util.*;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * An Endpoint is the root object of any connection of a device or a gateway to cloud.io. The parameters of the
@@ -392,9 +389,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MQTT_PERSISTENCE_QUEUE_LIFO     = "LIFO";
         private static final String MQTT_PERSISTENCE_QUEUE_PROPERTY = "ch.hevs.cloudio.endpoint.persistence-queue-type";
         private static final String MQTT_PERSISTENCE_QUEUE_DEFAULT  = MQTT_PERSISTENCE_QUEUE_LIFO;
-        private static final String MQTT_UPDATE_LIMIT_PROPERTY      = "ch.hevs.cloudio.endpoint.update-persistence-limit";
+        private static final String MQTT_UPDATE_LIMIT_PROPERTY      = "ch.hevs.cloudio.endpoint.update-limit";
         private static final String MQTT_UPDATE_LIMIT_DEFAULT       = "10000";
-        private static final String MQTT_LOG_LIMIT_PROPERTY         = "ch.hevs.cloudio.endpoint.log-persistence-limit";
+        private static final String MQTT_LOG_LIMIT_PROPERTY         = "ch.hevs.cloudio.endpoint.log-limit";
         private static final String MQTT_LOG_LIMIT_DEFAULT          = "10000";
         private static final String ENDPOINT_IDENTITY_FILE_TYPE     = "PKCS12";
         private static final String ENDPOINT_IDENTITY_MANAGER_TYPE  = "SunX509";
@@ -432,15 +429,11 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private final MqttAsyncClient mqtt;
         private final boolean persistence;
         private final boolean persistenceQueueFifo;
-        private int updatePersistenceLimit;
-        private int logPersistenceLimit;
         private final CloudioMessageFormat messageFormat;
         private final List<CloudioEndpointListener> listeners = new LinkedList<CloudioEndpointListener>();
         private String jobsFilePath;
         private boolean inTransaction = false;
         private Transaction transaction = new Transaction();
-
-        private Object persistenceLock = new Object();
 
         private CloudioPersistence cloudioPersistence;
 
@@ -572,22 +565,23 @@ public class CloudioEndpoint implements CloudioEndpointService {
             else{
                 persistenceQueueFifo = persistenceQueueProvider.equals(MQTT_PERSISTENCE_QUEUE_FIFO);
             }
-
+            int updatePersistenceLimit;
             try {
                 updatePersistenceLimit = Integer.parseInt(
                         configuration.getProperty(MQTT_UPDATE_LIMIT_PROPERTY, MQTT_UPDATE_LIMIT_DEFAULT));
             } catch (NumberFormatException exception) {
                 throw new InvalidPropertyException("Invalid persistence limit for update messages" +
-                        "(ch.hevs.cloudio.endpoint.update-persistence-limit), " +
+                        "(ch.hevs.cloudio.endpoint.update-limit), " +
                         "must be a valid integer number");
             }
 
+            int logPersistenceLimit;
             try {
                 logPersistenceLimit = Integer.parseInt(
                         configuration.getProperty(MQTT_LOG_LIMIT_PROPERTY, MQTT_LOG_LIMIT_DEFAULT));
             } catch (NumberFormatException exception) {
                 throw new InvalidPropertyException("Invalid persistence limit for log messages" +
-                        "(ch.hevs.cloudio.endpoint.log-persistence-limit), " +
+                        "(ch.hevs.cloudio.endpoint.log-limit), " +
                         "must be a valid integer number");
             }
 
@@ -615,7 +609,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
             cloudioPersistence = new CloudioMapdbPersistence(PERSISTENCE_FILE, PERSISTENCE_MAP_NAME,
                     PERSISTENCE_MAP_MQTT_UPDATE, PERSISTENCE_MAP_MQTT_LOG, updatePersistenceLimit, logPersistenceLimit);
-            cloudioPersistence.openDatabase();
+            cloudioPersistence.open();
 
             String logLevel = (String) cloudioPersistence.getPersistentProperty(PERSISTENCE_LOG_LEVEL, "");
             if (logLevel.equals("")) {
@@ -804,7 +798,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                         @Override
                                         public void run() {
                                             try {
-                                                synchronized (persistenceLock) {
+                                                synchronized (cloudioPersistence) {
 
                                                     String treeMapNames[] = {PERSISTENCE_MAP_MQTT_UPDATE,
                                                                             PERSISTENCE_MAP_MQTT_LOG};
@@ -1097,7 +1091,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         protected void finalize() throws Throwable {
             super.finalize();
             close();
-            cloudioPersistence.closeDatabase();
+            cloudioPersistence.close();
         }
     }
 }
