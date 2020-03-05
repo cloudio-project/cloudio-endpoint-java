@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    compile(group: 'ch.hevs.cloudio', name: 'cloudio-endpoint-java', version: '0.1.5')
+    compile(group: 'ch.hevs.cloudio', name: 'cloudio-endpoint-java', version: '0.1.6')
 }
 ```
 
@@ -38,7 +38,7 @@ dependencies {
        <dependency>
          <groupId>ch.hevs.cloudio</groupId>
          <artifactId>cloudio-endpoint-java</artifactId>
-         <version>0.1.5</version>
+         <version>0.1.6</version>
          <type>jar</type>
        </dependency>
     </dependencies>
