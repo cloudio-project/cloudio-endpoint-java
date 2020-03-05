@@ -1,8 +1,18 @@
 package ch.hevs.cloudio.endpoint;
 
-import java.util.Set;
-
 public interface CloudioPersistence {
+
+    static class Message {
+        public long timestamp;
+        public String topic;
+        public byte[] data;
+
+        public Message(long timestamp, String topic, byte[] data) {
+            this.timestamp = timestamp;
+            this.topic = topic;
+            this.data = data;
+        }
+    }
 
     /**
      * Open the persistence database
@@ -32,68 +42,34 @@ public interface CloudioPersistence {
     Object getPersistentProperty(String key, Object defaultValue);
 
     /**
-     * Get data of update message from the persistence database
+     * Store a pending message to the corresponding category
      *
-     * @param key key reference of the update message to get
-     * @return update message from persistence database
+     * @param category Message category to store
+     * @param persistenceLimit Limit of message to be stored in the category
+     * @param message message to store
      */
-    byte[] getPersistentUpdate(String key);
+    void storeMessage(String category, int persistenceLimit, Message message);
 
     /**
-     *  Get data of log message from the persistence database
+     * Return the last/first pending message from the category
      *
-     * @param key key reference of the log message to get
-     * @return log message from persistence database
+     * @param category Message category to retrieve pending message
+     * @return
      */
-    byte[] getPersistentLog(String key);
+    Message getPendingMessage(String category);
 
     /**
-     * Remove data of update message according to its key from the persistence database
+     * Remove the last/first pending message from the category
      *
-     * @param key key reference of the update message to remove
+     * @param category Message category to remove pending message
      */
-    void removePersistentUpdate(String key);
+    void removePendingMessage(String category);
 
     /**
-     * Remove data of log message according to its key from the persistence database
+     * Count the amount of pending message stored in the category
      *
-     * @param key key reference of the log message to remove
+     * @param category Message category to count pending messages
+     * @return amount of pending messages in category
      */
-    void removePersistentLog(String key);
-
-    /**
-     * Get the set of the keys of the update messages stored in the persistence database
-     *
-     * @return Set of keys
-     */
-    Set<String> getPersistentUpdateKeySet();
-
-    /**
-     * Get the set of the keys of the log messages stored in the persistence database
-     *
-     * @return Set of keys
-     */
-    Set<String>  getPersistentLogKeySet();
-
-    /**
-     * Remove data of update message according to its key from the persistence database
-     *
-     * @param key key reference of the update message to remove
-     */
-
-    /**
-     * Add data of update message to the persistence database
-     *
-     * @param key key reference of the update message to add
-     * @param data data of the update message
-     */
-    void addPersistentUpdate(String key, byte[] data);
-
-    /**
-     * Add data of log message to the persistence database
-     *
-     * @param key key reference of the log message to add
-     * @param data data of the log message
-     */
-    void addPersistentLog(String key, byte[] data);
+    long messageCount(String category);
 }
