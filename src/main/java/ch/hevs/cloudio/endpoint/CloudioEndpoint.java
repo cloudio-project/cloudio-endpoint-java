@@ -24,9 +24,9 @@ import java.util.Stack;
  * Properties file at the following locations (The Properties files are searched in the order of listing):
  * <br><br>
  * <ul>
- *     <li>~/.config/cloud.io/{Endpoint UUID}.properties on the local file system.</li>
- *     <li>/etc/cloud.io/{Endpoint UUID}.properties on the local file system.</li>
- *     <li>cloud.io/{Endpoint UUID}.properties inside the application bundle.</li>
+ *     <li>~/.config/cloud.io/{uuidOrAppName}.properties on the local file system.</li>
+ *     <li>/etc/cloud.io/{uuidOrAppName}.properties on the local file system.</li>
+ *     <li>cloud.io/{uuidOrAppName}.properties inside the application bundle.</li>
  * </ul>
  * <br><br>
  * <b>Specifying resource locations:</b><br>
@@ -56,6 +56,11 @@ import java.util.Stack;
  * supported properties:
  * <br><br>
  * <ul>
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.uuid</b><br>
+ *         UUID of the EndPoint, must be used when an application name is passed to the CloudioEndpoint constructor.
+ *         The parameter will be used to search for a {uuidOrAppName}.properties file.
+ *     </li>
  *     <li>
  *         <b>ch.hevs.cloudio.endpoint.hostUri</b><br>
  *         URI of the cloud.io broker URI to connect to. An example might be "ssl://example.org:8883". Note that two
@@ -164,38 +169,42 @@ public class CloudioEndpoint implements CloudioEndpointService {
     final InternalEndpoint internal;
 
     /**
-     * Constructs a new Endpoint object using the given UUID. As no properties are given using this constructor, the
-     * properties are loaded from the file system or the actual bundle itself.
+     * Constructs a new Endpoint object using the given UUID or application name. As no properties are given using this constructor, the properties are loaded
+     * from the file system or the actual bundle itself.
      *
      * The Java Properties file at the following locations (The Properties files are searched in the order of listing)
      * are used:
      * <ul>
-     *     <li>~/.config/cloud.io/{Endpoint UUID}.properties on the local file system.</li>
-     *     <li>/etc/cloud.io/{Endpoint UUID}.properties on the local file system.</li>
-     *     <li>~{Endpoint UUID}.properties inside the application bundle (classpath).</li>
+     *     <li>~/.config/cloud.io/{uuidOrAppName}.properties on the local file system.</li>
+     *     <li>/etc/cloud.io/{uuidOrAppName}.properties on the local file system.</li>
+     *     <li>~{uuidOrAppName}.properties inside the application bundle (classpath).</li>
      * </ul>
      *
      * The endpoint will try immediately to connect to the central message broker and tries automatically to maintain
      * this connection in the background.
      *
-     * @param uuid                              Unique ID of the endpoint.
+     * @param uuidOrAppName                     Unique ID of the endpoint or an application name. In the case of an
+     *                                          application name, the properties must define the UUID using the
+     *                                          'ch.hevs.cloudio.endpoint.uuid' property.
      * @throws InvalidUuidException             If the given UUID is invalid.
      * @throws InvalidPropertyException         Either a mandatory property is missing or a property has an invalid
      *                                          value.
      * @throws CloudioEndpointInitializationException  The endpoint could not be initialized. This might be caused by invalid
      *                                          parameters, invalid certificates or any other runtime errors.
      */
-    public CloudioEndpoint(String uuid) throws InvalidUuidException, InvalidPropertyException,
+    public CloudioEndpoint(String uuidOrAppName) throws InvalidUuidException, InvalidPropertyException,
             CloudioEndpointInitializationException {
         // Call internal designated constructor with empty properties reference.
-        internal = new InternalEndpoint(uuid, null, null);
+        internal = new InternalEndpoint(uuidOrAppName, null, null);
     }
 
     /**
      * Constructs a new CloudioEndpoint object using the given UUID and properties. The endpoint will try immediately to
      * connect to the central message broker and tries automatically to maintain this connection in the background.
      *
-     * @param uuid                              Unique ID of the endpoint.
+     * @param uuidOrAppName                     Unique ID of the endpoint or an application name. In the case of an
+     *                                          application name, the properties must define the UUID using the
+     *                                          'ch.hevs.cloudio.endpoint.uuid property'.
      * @param properties                        Properties containing the endpoint configuration parameters.
      * @throws InvalidUuidException             If the given UUID is invalid.
      * @throws InvalidPropertyException         Either a mandatory property is missing or a property has an invalid
@@ -203,9 +212,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
      * @throws CloudioEndpointInitializationException  The endpoint could not be initialized. This might be caused by invalid
      *                                          parameters, invalid certificates or any other runtime errors.
      */
-    public CloudioEndpoint(String uuid, Properties properties)
+    public CloudioEndpoint(String uuidOrAppName, Properties properties)
             throws InvalidUuidException, InvalidPropertyException, CloudioEndpointInitializationException {
-        internal = new InternalEndpoint(uuid, new PropertiesEndpointConfiguration(properties), null);
+        internal = new InternalEndpoint(uuidOrAppName, new PropertiesEndpointConfiguration(properties), null);
     }
 
     /**
@@ -213,7 +222,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
      * connect to the central message broker and tries automatically to maintain this connection in the background.
      * The given endpoint listener receives updates about the state of the endpoint.
      *
-     * @param uuid                              Unique ID of the endpoint.
+     * @param uuidOrAppName                     Unique ID of the endpoint or an application name. In the case of an
+     *                                          application name, the properties must define the UUID using the
+     *                                          'ch.hevs.cloudio.endpoint.uuid property'.
      * @param properties                        Properties containing the endpoint configuration parameters.
      * @param listener                          Reference to the listener receiving status updates.
      * @throws InvalidUuidException             If the given UUID is invalid.
@@ -222,16 +233,18 @@ public class CloudioEndpoint implements CloudioEndpointService {
      * @throws CloudioEndpointInitializationException  The endpoint could not be initialized. This might be caused by invalid
      *                                          parameters, invalid certificates or any other runtime errors.
      */
-    public CloudioEndpoint(String uuid, Properties properties, CloudioEndpointListener listener)
+    public CloudioEndpoint(String uuidOrAppName, Properties properties, CloudioEndpointListener listener)
             throws InvalidUuidException, InvalidPropertyException, CloudioEndpointInitializationException {
-        internal = new InternalEndpoint(uuid, new PropertiesEndpointConfiguration(properties), listener);
+        internal = new InternalEndpoint(uuidOrAppName, new PropertiesEndpointConfiguration(properties), listener);
     }
 
     /**
      * Designated constructor. Uses the {@link CloudioEndpointConfiguration} interface to read the endpoint configuration
      * options.
      *
-     * @param uuid                              Unique ID of the endpoint.
+     * @param uuidOrAppName                     Unique ID of the endpoint or an application name. In the case of an
+     *                                          application name, the properties must define the UUID using the
+     *                                          'ch.hevs.cloudio.endpoint.uuid property'.
      * @param configuration                     Configuration object containing the endpoint configuration parameters.
      * @throws InvalidUuidException             If the given UUID is invalid.
      * @throws InvalidPropertyException         Either a mandatory property is missing or a property has an invalid
@@ -239,9 +252,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
      * @throws CloudioEndpointInitializationException  The endpoint could not be initialized. This might be caused by invalid
      *                                          parameters, invalid certificates or any other runtime errors.
      */
-    CloudioEndpoint(String uuid, CloudioEndpointConfiguration configuration) throws InvalidUuidException, InvalidPropertyException,
+    CloudioEndpoint(String uuidOrAppName, CloudioEndpointConfiguration configuration) throws InvalidUuidException, InvalidPropertyException,
             CloudioEndpointInitializationException {
-        internal = new InternalEndpoint(uuid, configuration, null);
+        internal = new InternalEndpoint(uuidOrAppName, configuration, null);
     }
 
     public void close() {
@@ -375,6 +388,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
     /*** Internal API *************************************************************************************************/
     class InternalEndpoint implements CloudioNodeContainer, MqttCallback, Runnable, CloudioLogAppender.LogAppenderDelegate {
         /*** Constants ************************************************************************************************/
+        private static final String UUID_PROPERTY	                = "ch.hevs.cloudio.endpoint.uuid";
         private static final String MQTT_HOST_URI_PROPERTY          = "ch.hevs.cloudio.endpoint.hostUri";
         private static final String MQTT_CONNECTION_TIMEOUT_PROPERTY= "ch.hevs.cloudio.endpoint.connectTimeout";
         private static final String MQTT_CONNECTION_TIMEOUT_DEFAULT = "5";
@@ -424,6 +438,14 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String PERSISTENCE_MQTT_UPDATE         = "cloudioPersistenceUpdate";
         private static final String PERSISTENCE_MQTT_LOG            = "cloudioPersistenceLog";
 
+        /**
+         * Characters prohibited in the UUID.
+         *
+         * This list of characters will prevent using separator or wildcard characters for most uses
+         * (messaging, databases, filesystems, ...).
+         */
+        private static final String UUID_INVALID_CHARS              = "./#*+\\\r\n?\"\0',:;<>";
+
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
         private final NamedItemSet<CloudioNode.InternalNode> nodes = new NamedItemSet<CloudioNode.InternalNode>();
@@ -442,27 +464,19 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private int updatePersistenceLimit;
         private int logPersistenceLimit;
 
-        public InternalEndpoint(String uuid, CloudioEndpointConfiguration configuration, CloudioEndpointListener listener)
+        public InternalEndpoint(String uuidOrAppName, CloudioEndpointConfiguration configuration, CloudioEndpointListener listener)
                 throws InvalidUuidException, InvalidPropertyException, CloudioEndpointInitializationException {
 
             // The ID has to be a valid string!
-            if (uuid == null) {
-                throw new InvalidUuidException("Uuid can not be null!");
-            }
-
-            // Set the UUID.
-            this.uuid = uuid;
-
-            // Add the listener if present.
-            if (listener != null) {
-                this.listeners.add(listener);
+            if (uuidOrAppName == null) {
+                throw new InvalidUuidException("uuidOrAppName can not be null!");
             }
 
             // Do we need to load the properties from a file?
             if (configuration == null) {
                 Properties properties = new Properties();
                 try {
-                    InputStream propertiesInputStream = ResourceLoader.getResourceFromLocations(uuid + ".properties",
+                    InputStream propertiesInputStream = ResourceLoader.getResourceFromLocations(uuidOrAppName + ".properties",
                             this,
                             "home:" + "/.config/cloud.io/",
                             "file:/etc/cloud.io/",
@@ -472,10 +486,25 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 } catch (Exception exception) {
                     throw new InvalidPropertyException("CloudioEndpoint properties missing: No properties given as " +
                             "argument to constructor and no properties file found " +
-                            "[\"home:/.config/cloud.io/" + uuid + ".properties\", " +
-                            "\"file:/etc/cloud.io/" + uuid + ".properties\", " +
-                            "\"classpath:" + uuid + ".properties\"].");
+                            "[\"home:/.config/cloud.io/" + uuidOrAppName + ".properties\", " +
+                            "\"file:/etc/cloud.io/" + uuidOrAppName + ".properties\", " +
+                            "\"classpath:" + uuidOrAppName + ".properties\"].");
                 }
+            }
+
+            // Set the UUID.
+            uuid = configuration.getProperty(UUID_PROPERTY, uuidOrAppName);
+
+            // Verify the UUID will be valid
+            for (char c : UUID_INVALID_CHARS.toCharArray()) {
+                if (uuid.contains(""+c)) {
+                    throw new InvalidUuidException(String.format("uuid(value:'%s') contains the invalid char 'UTF+%04X'",  uuid, (int)c));
+                }
+            }
+
+            // Add the listener if present.
+            if (listener != null) {
+                this.listeners.add(listener);
             }
 
             // Create message format instance.
@@ -490,7 +519,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             // Create a SSL based MQTT option object.
             options = new MqttConnectOptions();
             try {
-                options.setSocketFactory(createSocketFactory(uuid, configuration));
+                options.setSocketFactory(createSocketFactory(uuidOrAppName, configuration));
             } catch (Exception exception) {
                 throw new CloudioEndpointInitializationException(exception);
             }
@@ -590,7 +619,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             }
 
             // Last will is a message with the UUID of the endpoint and no payload.
-            options.setWill("@offline/" + uuid, new byte[0], 1, false);
+            options.setWill("@offline/" + uuidOrAppName, new byte[0], 1, false);
 
 
             // Create the MQTT client.
@@ -599,7 +628,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 if (host == null) {
                     throw new InvalidPropertyException("Missing mandatory property \"" + MQTT_HOST_URI_PROPERTY + "\"");
                 }
-                mqtt = new MqttAsyncClient(configuration.getProperty(MQTT_HOST_URI_PROPERTY), uuid, null);
+                mqtt = new MqttAsyncClient(configuration.getProperty(MQTT_HOST_URI_PROPERTY), uuidOrAppName, null);
             } catch (MqttException exception) {
                 throw new CloudioEndpointInitializationException(exception);
             }
