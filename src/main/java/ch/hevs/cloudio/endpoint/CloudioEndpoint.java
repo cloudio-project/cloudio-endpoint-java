@@ -6,8 +6,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.eclipse.paho.client.mqttv3.*;
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -15,8 +13,10 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.InputStream;
 import java.security.KeyStore;
-import java.util.*;
-import java.util.concurrent.ConcurrentMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Properties;
+import java.util.Stack;
 
 /**
  * An Endpoint is the root object of any connection of a device or a gateway to cloud.io. The parameters of the
@@ -373,7 +373,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
     }
 
     /*** Internal API *************************************************************************************************/
-    class InternalEndpoint implements CloudioNodeContainer, MqttCallback, Runnable {
+    class InternalEndpoint implements CloudioNodeContainer, MqttCallback, Runnable, CloudioLogAppender.LogAppenderDelegate {
         /*** Constants ************************************************************************************************/
         private static final String MQTT_HOST_URI_PROPERTY          = "ch.hevs.cloudio.endpoint.hostUri";
         private static final String MQTT_CONNECTION_TIMEOUT_PROPERTY= "ch.hevs.cloudio.endpoint.connectTimeout";
@@ -388,6 +388,14 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MQTT_PERSISTENCE_FALSE          = "false";
         private static final String MQTT_PERSISTENCE_PROPERTY       = "ch.hevs.cloudio.endpoint.persistence";
         private static final String MQTT_PERSISTENCE_DEFAULT        = MQTT_PERSISTENCE_TRUE;
+        private static final String MQTT_PERSISTENCE_QUEUE_FIFO     = "FIFO";
+        private static final String MQTT_PERSISTENCE_QUEUE_LIFO     = "LIFO";
+        private static final String MQTT_PERSISTENCE_QUEUE_PROPERTY = "ch.hevs.cloudio.endpoint.persistence-queue-type";
+        private static final String MQTT_PERSISTENCE_QUEUE_DEFAULT  = MQTT_PERSISTENCE_QUEUE_LIFO;
+        private static final String MQTT_UPDATE_LIMIT_PROPERTY      = "ch.hevs.cloudio.endpoint.update-limit";
+        private static final String MQTT_UPDATE_LIMIT_DEFAULT       = "10000";
+        private static final String MQTT_LOG_LIMIT_PROPERTY         = "ch.hevs.cloudio.endpoint.log-limit";
+        private static final String MQTT_LOG_LIMIT_DEFAULT          = "10000";
         private static final String ENDPOINT_IDENTITY_FILE_TYPE     = "PKCS12";
         private static final String ENDPOINT_IDENTITY_MANAGER_TYPE  = "SunX509";
         private static final String ENDPOINT_IDENTITY_FILE_PROPERTY = "ch.hevs.cloudio.endpoint.ssl.clientCert";
@@ -411,9 +419,10 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
         /*** MapDB parameters******************************************************************************************/
         private static final String PERSISTENCE_FILE                = "cloudiOPersistenceData.db";
-        private static final String PERSISTENCE_MAP_NAME            = "cloudioPersistenceData";
+        private static final String PERSISTENCE_PROPERTY_NAME       = "cloudioPersistenceProperties";
         private static final String PERSISTENCE_LOG_LEVEL           = "logLevel";
-        private static final String PERSISTENCE_MAP_MQTT_MESSAGES   = "cloudioPersistenceMessages";
+        private static final String PERSISTENCE_MQTT_UPDATE         = "cloudioPersistenceUpdate";
+        private static final String PERSISTENCE_MQTT_LOG            = "cloudioPersistenceLog";
 
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
@@ -422,11 +431,16 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private int retryInterval;
         private final MqttAsyncClient mqtt;
         private final boolean persistence;
+        private final boolean persistenceQueueFifo;
         private final CloudioMessageFormat messageFormat;
         private final List<CloudioEndpointListener> listeners = new LinkedList<CloudioEndpointListener>();
         private String jobsFilePath;
         private boolean inTransaction = false;
         private Transaction transaction = new Transaction();
+
+        private CloudioPersistence cloudioPersistence;
+        private int updatePersistenceLimit;
+        private int logPersistenceLimit;
 
         public InternalEndpoint(String uuid, CloudioEndpointConfiguration configuration, CloudioEndpointListener listener)
                 throws InvalidUuidException, InvalidPropertyException, CloudioEndpointInitializationException {
@@ -541,9 +555,39 @@ public class CloudioEndpoint implements CloudioEndpointService {
                         "must be a valid integer number");
             }
 
-            // Create persistence object.
+            // Configure persistence
             String persistenceProvider = configuration.getProperty(MQTT_PERSISTENCE_PROPERTY, MQTT_PERSISTENCE_DEFAULT);
             persistence = persistenceProvider.equals(MQTT_PERSISTENCE_TRUE);
+
+            String persistenceQueueProvider = configuration.getProperty(MQTT_PERSISTENCE_QUEUE_PROPERTY, MQTT_PERSISTENCE_QUEUE_DEFAULT);
+
+            if(!persistenceQueueProvider.equals(MQTT_PERSISTENCE_QUEUE_FIFO) &&
+                    !persistenceQueueProvider.equals(MQTT_PERSISTENCE_QUEUE_LIFO)){
+                throw new InvalidPropertyException("Invalid persistence queue type" +
+                        "(ch.hevs.cloudio.endpoint.persistence-queue-type), " +
+                        "must be FIFO or LIFO");
+            }
+            else{
+                persistenceQueueFifo = persistenceQueueProvider.equals(MQTT_PERSISTENCE_QUEUE_FIFO);
+            }
+
+            try {
+                updatePersistenceLimit = Integer.parseInt(
+                        configuration.getProperty(MQTT_UPDATE_LIMIT_PROPERTY, MQTT_UPDATE_LIMIT_DEFAULT));
+            } catch (NumberFormatException exception) {
+                throw new InvalidPropertyException("Invalid persistence limit for update messages" +
+                        "(ch.hevs.cloudio.endpoint.update-limit), " +
+                        "must be a valid integer number");
+            }
+
+            try {
+                logPersistenceLimit = Integer.parseInt(
+                        configuration.getProperty(MQTT_LOG_LIMIT_PROPERTY, MQTT_LOG_LIMIT_DEFAULT));
+            } catch (NumberFormatException exception) {
+                throw new InvalidPropertyException("Invalid persistence limit for log messages" +
+                        "(ch.hevs.cloudio.endpoint.log-limit), " +
+                        "must be a valid integer number");
+            }
 
             // Last will is a message with the UUID of the endpoint and no payload.
             options.setWill("@offline/" + uuid, new byte[0], 1, false);
@@ -567,27 +611,24 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 jobsFilePath = "etc/cloud.io";
             }
 
-            //Initialize the cloud.iO persistence file
-            DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-            ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
-            dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
-            String logLevel = (String)map.getOrDefault(PERSISTENCE_LOG_LEVEL,"");
-            if(logLevel.equals("")) {
-                map.put(PERSISTENCE_LOG_LEVEL, "ERROR");
+            cloudioPersistence = new CloudioMapdbPersistence(PERSISTENCE_FILE, PERSISTENCE_PROPERTY_NAME, persistenceQueueFifo);
+            cloudioPersistence.open();
+
+            String logLevel = (String) cloudioPersistence.getPersistentProperty(PERSISTENCE_LOG_LEVEL, "");
+            if (logLevel.equals("")) {
+                cloudioPersistence.setPersistentProperty(PERSISTENCE_LOG_LEVEL, "ERROR");
                 Configurator.setRootLevel(Level.ERROR);
-            }
-            else{
+            } else {
                 Level log4jLevel = Level.getLevel(logLevel);
                 Configurator.setRootLevel(log4jLevel);
             }
-            dbPersistenceData.close();
 
             //Create the CloudioLogAppender and give the mqtt object to it
             org.apache.logging.log4j.core.Logger coreLogger =
                     (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
 
             CloudioLogAppender cloudioLogAppender = new CloudioLogAppender("CloudioLogAppender", null);
-            cloudioLogAppender.setAppenderMqttParameters(mqtt, uuid, messageFormat, persistence, PERSISTENCE_FILE, PERSISTENCE_MAP_MQTT_MESSAGES);
+            cloudioLogAppender.setAppenderLogAppenderDelegate(this);
 
             coreLogger.addAppender(cloudioLogAppender);
             cloudioLogAppender.start();
@@ -623,13 +664,10 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 // available.
                 if (!messageSend && persistence) {
                     try {
-                        DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
-                        map.put("PendingUpdate-@update/" + attribute.getUuid().toString()
-                                        + "-" + Calendar.getInstance().getTimeInMillis(),
-                                data);
-                        dbPersistenceData.close();
+                        CloudioPersistence.Message message
+                                = new CloudioPersistence.Message("@update/"+ attribute.getUuid().toString(),data);
 
+                        cloudioPersistence.storeMessage(PERSISTENCE_MQTT_UPDATE, updatePersistenceLimit, message);
                     } catch (Exception exception) {
                         log.error("Exception :" + exception.getMessage());
                         exception.printStackTrace();
@@ -715,13 +753,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     try{
                         Level log4jLevel = Level.getLevel(logParameter.getLevel());
                         Configurator.setRootLevel(log4jLevel);
-
-                        //put loglevel in mapDB
-                        DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_NAME).createOrOpen();
-                        map.put(PERSISTENCE_LOG_LEVEL, logParameter.getLevel());
-                        dbPersistenceData.close();
-
+                        cloudioPersistence.setPersistentProperty(PERSISTENCE_LOG_LEVEL, logParameter.getLevel());
                     }catch (Exception e){
                         log.error("Level \"" + logParameter.getLevel() + "\" not supported!");
                         e.printStackTrace();
@@ -771,40 +803,40 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                         @Override
                                         public void run() {
                                             try {
-                                                DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                                                ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
+                                                synchronized (cloudioPersistence) {
 
-                                                Set<String> keys = map.keySet();
+                                                    String messageCategories[] = {PERSISTENCE_MQTT_UPDATE,
+                                                            PERSISTENCE_MQTT_LOG};
+                                                    for(String messageCategory: messageCategories) {
 
-                                                while (mqtt.isConnected() && !keys.isEmpty()){
-                                                    String key = (String)keys.toArray()[0];
+                                                        while (mqtt.isConnected() && cloudioPersistence.messageCount(messageCategory)!=0) {
 
-                                                    // Is it a pending update?
-                                                    if (key.startsWith("PendingUpdate-")) {
+                                                            CloudioPersistence.Message message;
 
-                                                        // Get the pending update persistent object from store.
-                                                        byte[] data = (byte[])map.get(key);
-                                                        String topic = key.substring(14, key.lastIndexOf("-"));
+                                                            message = cloudioPersistence.getPendingMessage(messageCategory);
 
-                                                        // Try to send the update to the broker and remove it from the storage.
-                                                        try {
-                                                            mqtt.publish(topic,data, 1, true);
-                                                            map.remove(key);
-                                                        } catch (MqttException exception) {
-                                                            log.error("Exception: " + exception.getMessage());
-                                                            exception.printStackTrace();
-                                                        }
+                                                            // Get the pending update persistent object from store.
+                                                            byte[] data = message.data;
+                                                            String topic = message.topic;
 
-                                                        try {
-                                                            Thread.sleep(100);
-                                                        } catch (InterruptedException exception) {
-                                                            log.error("Exception: " + exception.getMessage());
-                                                            exception.printStackTrace();
+                                                            // Try to send the update to the broker and remove it from the storage.
+                                                            try {
+                                                                mqtt.publish(topic, data, 1, true);
+                                                                cloudioPersistence.removePendingMessage(messageCategory);
+                                                            } catch (MqttException exception) {
+                                                                log.error("Exception: " + exception.getMessage());
+                                                                exception.printStackTrace();
+                                                            }
+
+                                                            try {
+                                                                Thread.sleep(100);
+                                                            } catch (InterruptedException exception) {
+                                                                log.error("Exception: " + exception.getMessage());
+                                                                exception.printStackTrace();
+                                                            }
                                                         }
                                                     }
                                                 }
-
-                                                dbPersistenceData.close();
 
                                             } catch (Exception exception) {
                                                 log.error("Exception: " + exception.getMessage());
@@ -969,12 +1001,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 // available.
                 if (!messageSend && persistence) {
                     try {
-                        DB dbPersistenceData = DBMaker.fileDB(PERSISTENCE_FILE).make();
-                        ConcurrentMap map = dbPersistenceData.hashMap(PERSISTENCE_MAP_MQTT_MESSAGES).createOrOpen();
-                        map.put("PendingUpdate-@transaction/" + uuid
-                                        + "-" + Calendar.getInstance().getTimeInMillis(),
-                                data);
-                        dbPersistenceData.close();
+                        CloudioPersistence.Message message
+                                = new CloudioPersistence.Message("@transaction/" + uuid,data);
+                        cloudioPersistence.storeMessage(PERSISTENCE_MQTT_UPDATE, updatePersistenceLimit, message);
 
                     } catch (Exception exception) {
                         log.error("Exception :" + exception.getMessage());
@@ -1018,9 +1047,39 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
 
         @Override
+        public void sendLogMessage(CloudioLogMessage cloudioLogMessage) {
+
+            byte[] data = messageFormat.serializeCloudioLog(cloudioLogMessage);
+
+            // Try to send the message if the MQTT client is connected.
+            boolean messageSend = false;
+            if (mqtt.isConnected()) {
+                try {
+                    mqtt.publish("@logs/" + uuid, data, 1, false);
+                    messageSend = true;
+                } catch (MqttException exception) {
+                    exception.printStackTrace();
+                }
+            }
+
+            // If the message could not be send for any reason, add the message to the pending updates persistence if
+            // available.
+            if (!messageSend && persistence) {
+                try {
+                    CloudioPersistence.Message message
+                            = new CloudioPersistence.Message("@logs/" + uuid,data);
+                    cloudioPersistence.storeMessage(PERSISTENCE_MQTT_LOG, logPersistenceLimit, message);
+                } catch (Exception exception) {
+                    exception.printStackTrace();
+                }
+            }
+        }
+
+        @Override
         protected void finalize() throws Throwable {
             super.finalize();
             close();
+            cloudioPersistence.close();
         }
     }
 }
