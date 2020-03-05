@@ -3,8 +3,6 @@ package ch.hevs.cloudio.endpoint;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 
-import java.util.Calendar;
-import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;

@@ -1,5 +1,7 @@
 package ch.hevs.cloudio.endpoint;
 
+import java.util.Calendar;
+
 public interface CloudioPersistence {
 
     static class Message {
@@ -9,6 +11,12 @@ public interface CloudioPersistence {
 
         public Message(long timestamp, String topic, byte[] data) {
             this.timestamp = timestamp;
+            this.topic = topic;
+            this.data = data;
+        }
+
+        public Message(String topic, byte[] data) {
+            this.timestamp = Calendar.getInstance().getTimeInMillis();
             this.topic = topic;
             this.data = data;
         }

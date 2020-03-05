@@ -13,7 +13,10 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.InputStream;
 import java.security.KeyStore;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Properties;
+import java.util.Stack;
 
 /**
  * An Endpoint is the root object of any connection of a device or a gateway to cloud.io. The parameters of the
@@ -662,8 +665,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 if (!messageSend && persistence) {
                     try {
                         CloudioPersistence.Message message
-                                = new CloudioPersistence.Message(Calendar.getInstance().getTimeInMillis(),
-                                "@update/"+ attribute.getUuid().toString(),data);
+                                = new CloudioPersistence.Message("@update/"+ attribute.getUuid().toString(),data);
 
                         cloudioPersistence.storeMessage(PERSISTENCE_MQTT_UPDATE, updatePersistenceLimit, message);
                     } catch (Exception exception) {
@@ -1000,8 +1002,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 if (!messageSend && persistence) {
                     try {
                         CloudioPersistence.Message message
-                                = new CloudioPersistence.Message(Calendar.getInstance().getTimeInMillis(),
-                                "@transaction/" + uuid,data);
+                                = new CloudioPersistence.Message("@transaction/" + uuid,data);
                         cloudioPersistence.storeMessage(PERSISTENCE_MQTT_UPDATE, updatePersistenceLimit, message);
 
                     } catch (Exception exception) {
@@ -1066,8 +1067,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             if (!messageSend && persistence) {
                 try {
                     CloudioPersistence.Message message
-                            = new CloudioPersistence.Message(Calendar.getInstance().getTimeInMillis(),
-                            "@logs/" + uuid,data);
+                            = new CloudioPersistence.Message("@logs/" + uuid,data);
                     cloudioPersistence.storeMessage(PERSISTENCE_MQTT_LOG, logPersistenceLimit, message);
                 } catch (Exception exception) {
                     exception.printStackTrace();
