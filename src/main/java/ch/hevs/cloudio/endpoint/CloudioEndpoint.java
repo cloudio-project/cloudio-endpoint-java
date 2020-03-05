@@ -426,6 +426,14 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String SSL_VERIFY_HOSTNAME_PROPERTY    = "ch.hevs.cloudio.endpoint.ssl.verifyHostname";
         private static final String SSL_VERIFY_HOSTNAME_DEFAULT     = "true";
 
+        /**
+         * Characters prohibited in the UUID.
+         * 
+         * This list of characters will prevent using separator or wildcard characters for most uses
+         * (messaging, databases, filesystems, ...).
+         */
+        private static final String UUID_INVALID_CHARS              = "./#*+\\\r\n?\"\0',:;<>";
+
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
         private final NamedItemSet<CloudioNode.InternalNode> nodes = new NamedItemSet<CloudioNode.InternalNode>();
@@ -466,6 +474,13 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
             // Set the UUID.
             uuid = configuration.getProperty(UUID_PROPERTY, uuidOrAppName);
+
+            // Verify the UUID will be valid
+            for (char c : UUID_INVALID_CHARS.toCharArray()) {
+            	if (uuid.contains(""+c)) {
+            		throw new InvalidUuidException(String.format("uuid(value:'%s') contains the invalid char 'UTF+%04X'",  uuid, (int)c));
+            	}
+            }
 
             // Add the listener if present.
             if (listener != null) {
