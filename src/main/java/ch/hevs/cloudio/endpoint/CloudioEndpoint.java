@@ -286,13 +286,27 @@ public class CloudioEndpoint implements CloudioEndpointService {
             node.internal.setParentNodeContainer(this.internal);
             internal.nodes.addItem(node.internal);
 
+            byte[] data = internal.messageFormat.serializeNode(node.internal);
+
             // If the endpoint is online, send node add message.
+            boolean messageSend = false;
             if (isOnline()) {
                 try {
-                    byte[] data = internal.messageFormat.serializeNode(node.internal);
                     internal.mqtt.publish("@nodeAdded/" + node.internal.getUuid(), data, 1, false);
+                    messageSend = true;
                 } catch (MqttException exception) {
                     log.error("Exception: " + exception.getMessage());
+                    exception.printStackTrace();
+                }
+            }
+            // If the message could not be send for any reason, add the message to the pending lifecycle persistence if
+            // available.
+            if (!messageSend && internal.persistence) {
+                try {
+                    CloudioPersistence.Message message
+                            = new CloudioPersistence.Message("@nodeAdded/" + node.internal.getUuid(),data);
+                    internal.cloudioPersistence.storeMessage(internal.PERSISTENCE_MQTT_LIFECYCLE, internal.updatePersistenceLimit, message);
+                } catch (Exception exception) {
                     exception.printStackTrace();
                 }
             }
@@ -329,11 +343,25 @@ public class CloudioEndpoint implements CloudioEndpointService {
             node.internal.setParentNodeContainer(null);
 
             // If the endpoint is online, send the node remove message.
+            boolean messageSend = false;
             if (isOnline()) {
                 try {
                     internal.mqtt.publish("@nodeRemoved/" + node.internal.getUuid(), null, 1, false);
+                    messageSend = true;
                 } catch (MqttException exception) {
                     log.error("Exception: " + exception.getMessage());
+                    exception.printStackTrace();
+                }
+            }
+
+            // If the message could not be send for any reason, add the message to the pending lifecycle persistence if
+            // available.
+            if (!messageSend && internal.persistence) {
+                try {
+                    CloudioPersistence.Message message
+                            = new CloudioPersistence.Message("@nodeRemoved/" + node.internal.getUuid(), null);
+                    internal.cloudioPersistence.storeMessage(internal.PERSISTENCE_MQTT_LIFECYCLE, internal.updatePersistenceLimit, message);
+                } catch (Exception exception) {
                     exception.printStackTrace();
                 }
             }
@@ -437,6 +465,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String PERSISTENCE_LOG_LEVEL           = "logLevel";
         private static final String PERSISTENCE_MQTT_UPDATE         = "cloudioPersistenceUpdate";
         private static final String PERSISTENCE_MQTT_LOG            = "cloudioPersistenceLog";
+        private static final String PERSISTENCE_MQTT_LIFECYCLE      = "cloudioPersistenceLifecycle";
 
         /**
          * Characters prohibited in the UUID.
@@ -679,7 +708,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                 // Try to send the message if the MQTT client is connected.
                 boolean messageSend = false;
-                if (mqtt.isConnected()) {
+                if (isOnline()) {
                     try {
                         mqtt.publish("@update/" + attribute.getUuid().toString(), data, 1, true);
                         messageSend = true;
@@ -835,7 +864,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                 synchronized (cloudioPersistence) {
 
                                                     String messageCategories[] = {PERSISTENCE_MQTT_UPDATE,
-                                                            PERSISTENCE_MQTT_LOG};
+                                                            PERSISTENCE_MQTT_LOG, PERSISTENCE_MQTT_LIFECYCLE};
                                                     for(String messageCategory: messageCategories) {
 
                                                         while (mqtt.isConnected() && cloudioPersistence.messageCount(messageCategory)!=0) {
@@ -1015,7 +1044,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 byte[] data = messageFormat.serializeTransaction(transaction);
                 boolean messageSend = false;
 
-                if (mqtt.isConnected()) {
+                if (isOnline()) {
                     try {
                         mqtt.publish("@transaction/" + uuid, data, 1, true);
                         messageSend = true;
@@ -1082,7 +1111,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
             // Try to send the message if the MQTT client is connected.
             boolean messageSend = false;
-            if (mqtt.isConnected()) {
+            if (isOnline()) {
                 try {
                     mqtt.publish("@logs/" + uuid, data, 1, false);
                     messageSend = true;
