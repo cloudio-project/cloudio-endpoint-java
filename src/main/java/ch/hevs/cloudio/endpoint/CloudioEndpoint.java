@@ -305,7 +305,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 try {
                     CloudioPersistence.Message message
                             = new CloudioPersistence.Message("@nodeAdded/" + node.internal.getUuid(),data);
-                    internal.cloudioPersistence.storeMessage(internal.PERSISTENCE_MQTT_LIFECYCLE, internal.updatePersistenceLimit, message);
+                    internal.cloudioPersistence.storeMessage(internal.PERSISTENCE_MQTT_LIFECYCLE, internal.lifecyclePersistenceLimit, message);
                 } catch (Exception exception) {
                     exception.printStackTrace();
                 }
@@ -360,7 +360,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 try {
                     CloudioPersistence.Message message
                             = new CloudioPersistence.Message("@nodeRemoved/" + node.internal.getUuid(), null);
-                    internal.cloudioPersistence.storeMessage(internal.PERSISTENCE_MQTT_LIFECYCLE, internal.updatePersistenceLimit, message);
+                    internal.cloudioPersistence.storeMessage(internal.PERSISTENCE_MQTT_LIFECYCLE, internal.lifecyclePersistenceLimit, message);
                 } catch (Exception exception) {
                     exception.printStackTrace();
                 }
@@ -438,6 +438,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MQTT_UPDATE_LIMIT_DEFAULT       = "10000";
         private static final String MQTT_LOG_LIMIT_PROPERTY         = "ch.hevs.cloudio.endpoint.log-limit";
         private static final String MQTT_LOG_LIMIT_DEFAULT          = "10000";
+        private static final String MQTT_LIFECYCLE_LIMIT_PROPERTY   = "ch.hevs.cloudio.endpoint.lifecycle-limit";
+        private static final String MQTT_LIFECYCLE_LIMIT_DEFAULT    = "10000";
         private static final String ENDPOINT_IDENTITY_FILE_TYPE     = "PKCS12";
         private static final String ENDPOINT_IDENTITY_MANAGER_TYPE  = "SunX509";
         private static final String ENDPOINT_IDENTITY_FILE_PROPERTY = "ch.hevs.cloudio.endpoint.ssl.clientCert";
@@ -492,6 +494,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private CloudioPersistence cloudioPersistence;
         private int updatePersistenceLimit;
         private int logPersistenceLimit;
+        private int lifecyclePersistenceLimit;
 
         public InternalEndpoint(String uuidOrAppName, CloudioEndpointConfiguration configuration, CloudioEndpointListener listener)
                 throws InvalidUuidException, InvalidPropertyException, CloudioEndpointInitializationException {
@@ -644,6 +647,15 @@ public class CloudioEndpoint implements CloudioEndpointService {
             } catch (NumberFormatException exception) {
                 throw new InvalidPropertyException("Invalid persistence limit for log messages" +
                         "(ch.hevs.cloudio.endpoint.log-limit), " +
+                        "must be a valid integer number");
+            }
+
+            try {
+                lifecyclePersistenceLimit = Integer.parseInt(
+                        configuration.getProperty(MQTT_LIFECYCLE_LIMIT_PROPERTY, MQTT_LIFECYCLE_LIMIT_DEFAULT));
+            } catch (NumberFormatException exception) {
+                throw new InvalidPropertyException("Invalid persistence limit for lifecycle messages" +
+                        "(ch.hevs.cloudio.endpoint.lifecycle-limit), " +
                         "must be a valid integer number");
             }
 
