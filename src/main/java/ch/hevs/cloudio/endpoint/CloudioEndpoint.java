@@ -93,6 +93,35 @@ import java.util.Stack;
  *         This property is optional and the default is <b>true</b>.
  *     </li>
  *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.persistence-queue-type</b><br>
+ *         This option configure the way the persistence queues will be emptied when the endpoint reconnect to the mqtt
+ *         broker. Two modes are possible: <b>FIFO</b> and <b>LIFO</b>.
+ *
+ *         This property is optional and the default is <b>LIFO</b>.
+ *     </li>
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.update-limit</b><br>
+ *         Limit of update messages (@update, @transaction) to be saved in the persistence queue. The queue act like a
+ *         rolled buffer and at every insertion of new messages, old messages are deleted according to this parameter.
+ *
+ *         This property is optional and the default is <b>10000</b>.
+ *     </li>
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.log-limit</b><br>
+ *         Limit of log messages (@logs) to be saved in the persistence queue. The queue act like a rolled buffer and
+ *         at every insertion of new messages, old messages are deleted according to this parameter.
+ *
+ *         This property is optional and the default is <b>10000</b>.
+ *     </li>
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.lifecycle-limit</b><br>
+ *         Limit of lifecycle messages (@nodeAdded, @nodeRemoved) to be saved in the persistence queue. The queue act
+ *         like  a rolled buffer and at every insertion of new messages, old messages are deleted according to this
+ *         parameter.
+ *
+ *         This property is optional and the default is <b>10000</b>.
+ *     </li>
+ *     <li>
  *         <b>ch.hevs.cloudio.endpoint.ssl.clientCert</b><br>
  *         Path to the client certificate file. The certificate file must be encoded in the PKCS12 key format and it
  *         needs to contain the client's certificate and the client's private key. The file has additionally to be
@@ -293,6 +322,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             if (isOnline()) {
                 try {
                     internal.mqtt.publish("@nodeAdded/" + node.internal.getUuid(), data, 1, false);
+                    System.out.println("NODE ADDED!: "+nodeName);
                     messageSend = true;
                 } catch (MqttException exception) {
                     log.error("Exception: " + exception.getMessage());
@@ -302,6 +332,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
             // If the message could not be send for any reason, add the message to the pending lifecycle persistence if
             // available.
             if (!messageSend && internal.persistence) {
+
+                System.out.println("NODE *NOT* ADDED: "+nodeName);
                 try {
                     CloudioPersistence.Message message
                             = new CloudioPersistence.Message("@nodeAdded/" + node.internal.getUuid(),data);
@@ -884,6 +916,11 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                             CloudioPersistence.Message message;
 
                                                             message = cloudioPersistence.getPendingMessage(messageCategory);
+
+                                                            if(messageCategory.equals(PERSISTENCE_MQTT_LIFECYCLE))
+                                                            {
+                                                                System.out.println(message.topic);
+                                                            }
 
                                                             // Get the pending update persistent object from store.
                                                             byte[] data = message.data;
