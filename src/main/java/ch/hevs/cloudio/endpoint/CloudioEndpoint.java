@@ -322,7 +322,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
             if (isOnline()) {
                 try {
                     internal.mqtt.publish("@nodeAdded/" + node.internal.getUuid(), data, 1, false);
-                    System.out.println("NODE ADDED!: "+nodeName);
                     messageSend = true;
                 } catch (MqttException exception) {
                     log.error("Exception: " + exception.getMessage());
@@ -332,8 +331,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
             // If the message could not be send for any reason, add the message to the pending lifecycle persistence if
             // available.
             if (!messageSend && internal.persistence) {
-
-                System.out.println("NODE *NOT* ADDED: "+nodeName);
                 try {
                     CloudioPersistence.Message message
                             = new CloudioPersistence.Message("@nodeAdded/" + node.internal.getUuid(),data);
@@ -916,12 +913,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                             CloudioPersistence.Message message;
 
                                                             message = cloudioPersistence.getPendingMessage(messageCategory);
-
-                                                            if(messageCategory.equals(PERSISTENCE_MQTT_LIFECYCLE))
-                                                            {
-                                                                System.out.println(message.topic);
-                                                            }
-
+                                                            
                                                             // Get the pending update persistent object from store.
                                                             byte[] data = message.data;
                                                             String topic = message.topic;
