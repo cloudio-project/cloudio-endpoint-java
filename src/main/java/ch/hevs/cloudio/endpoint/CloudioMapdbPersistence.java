@@ -86,6 +86,36 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
     }
 
     @Override
+    public synchronized Message getMessage(String category, int index){
+
+        ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
+
+        if(index >= map.size())
+            throw new IndexOutOfBoundsException();
+
+        Set<String> keys = map.keySet();
+
+        String key = (String) keys.toArray()[index];
+
+        byte[] data = (byte[]) map.get(key);
+
+        String[] splitKey = key.split(" ");
+
+        long timestamp = Long.parseLong(splitKey[0]);
+        String topic = splitKey[1];
+
+        return new Message(timestamp, topic, data);
+    }
+
+
+    @Override
+    public int getLength(String category){
+
+        ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
+        return map.size();
+    }
+
+    @Override
     public synchronized void removePendingMessage(String category) {
         ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
         Set<String> keys = map.keySet();

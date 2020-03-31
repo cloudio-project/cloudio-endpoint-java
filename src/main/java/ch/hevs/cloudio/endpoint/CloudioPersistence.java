@@ -66,6 +66,11 @@ public interface CloudioPersistence {
      */
     Message getPendingMessage(String category);
 
+
+    Message getMessage(String category, int index);
+
+    int getLength(String category);
+
     /**
      * Remove the last/first pending message from the category
      *

@@ -26,6 +26,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
             generator.writeStartObject();
 
             List<CloudioNode.InternalNode> nodes = endpoint.getNodes();
+            generator.writeStringField("version", endpoint.getVersion());
             generator.writeObjectFieldStart("nodes");
             for (CloudioNode.InternalNode node: nodes) {
                 generator.writeFieldName(node.getName());
@@ -34,6 +35,87 @@ class JsonMessageFormat implements CloudioMessageFormat {
             generator.writeEndObject();
 
             generator.writeEndObject();
+
+            generator.flush();
+        } catch (IOException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+        return outputStream.toByteArray();
+    }
+
+    public byte[] serializeDelayed(CloudioPersistence cloudioPersistence, String messageCategories[]) {
+
+        ByteArrayBuilder outputStream = new ByteArrayBuilder();
+        try {
+            JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
+
+            generator.writeStartObject();
+
+            generator.writeObjectFieldStart("messages");
+
+            for(String messageCategory: messageCategories) {
+                CloudioPersistence.Message message;
+
+                for(int i = 0; i<cloudioPersistence.getLength(messageCategory); i++)
+                {
+                    message = cloudioPersistence.getMessage(messageCategory,i);
+
+                    // Get the pending update persistent object from store.
+                    byte[] data = message.data;
+                    String topic = message.topic;
+
+                    generator.writeFieldName(topic);
+
+                    generator.writeStartObject();
+                    generator.flush();
+                    outputStream.write(data,1,data.length-1);
+                    generator.flush();
+                    if(i!=cloudioPersistence.getLength(messageCategory)-1 || !messageCategory.equals(messageCategories[messageCategories.length-1]))
+                        outputStream.write(",".getBytes());
+                }
+            }
+
+            generator.writeEndObject();
+            generator.writeEndObject();
+
+            generator.flush();
+        } catch (IOException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+        return outputStream.toByteArray();
+
+    }
+
+    public byte[] serializeTest(byte[] input) {
+        ByteArrayBuilder outputStream = new ByteArrayBuilder();
+        try {
+            JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
+
+            generator.writeStartObject();
+
+            generator.writeObjectFieldStart("messages");
+
+            generator.writeFieldName("testa");
+
+            generator.writeStartObject();
+            generator.flush();
+            outputStream.write(input,1,input.length-1);
+            generator.flush();
+            outputStream.write(",".getBytes());
+
+            generator.writeFieldName("testb");
+
+            generator.writeStartObject();
+            generator.flush();
+            outputStream.write(input,1,input.length-1);
+            generator.flush();
+
+            generator.writeEndObject();
+            generator.writeEndObject();
+
+
 
             generator.flush();
         } catch (IOException exception) {
@@ -68,6 +150,9 @@ class JsonMessageFormat implements CloudioMessageFormat {
             log.error("Exception: " + exception.getMessage());
             exception.printStackTrace();
         }
+
+        System.out.println(outputStream.toString());
+        System.out.println(outputStream.toByteArray());
         return outputStream.toByteArray();
     }
 

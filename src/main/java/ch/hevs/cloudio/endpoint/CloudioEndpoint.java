@@ -508,6 +508,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
+        private final String version = "v0.2";
         private final NamedItemSet<CloudioNode.InternalNode> nodes = new NamedItemSet<CloudioNode.InternalNode>();
         private final MqttConnectOptions options;
         private int retryInterval;
@@ -786,6 +787,10 @@ public class CloudioEndpoint implements CloudioEndpointService {
             return new TopicUuid(this);
         }
 
+        public String getVersion(){
+            return version;
+        }
+
         /*** NamedItem Implementation *********************************************************************************/
         @Override
         public String getName() {
@@ -906,6 +911,16 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                                                     String messageCategories[] = {PERSISTENCE_MQTT_UPDATE,
                                                             PERSISTENCE_MQTT_LOG, PERSISTENCE_MQTT_LIFECYCLE};
+
+                                                    byte[] data = messageFormat.serializeDelayed(cloudioPersistence,messageCategories);
+
+                                                    try {
+                                                        mqtt.publish("@delayed/" + internal.uuid, data, 1, true);
+                                                    } catch (MqttException exception) {
+                                                        log.error("Exception: " + exception.getMessage());
+                                                        exception.printStackTrace();
+                                                    }
+                                                    /*
                                                     for(String messageCategory: messageCategories) {
 
                                                         while (mqtt.isConnected() && cloudioPersistence.messageCount(messageCategory)!=0) {
@@ -934,7 +949,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                                 exception.printStackTrace();
                                                             }
                                                         }
-                                                    }
+                                                    }/*/
                                                 }
 
                                             } catch (Exception exception) {

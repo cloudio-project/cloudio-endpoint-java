@@ -29,6 +29,8 @@ interface CloudioMessageFormat {
      */
     byte[] serializeAttribute(CloudioAttribute.InternalAttribute attribute);
 
+    byte[] serializeDelayed(CloudioPersistence cloudioPersistence, String messageCategories[]);
+
     /**
      * A CloudioMessageFormat implementation should return the encoded payload of the serialization of the given transaction.
      *
