@@ -93,6 +93,35 @@ import java.util.Stack;
  *         This property is optional and the default is <b>true</b>.
  *     </li>
  *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.persistence-queue-type</b><br>
+ *         This option configure the way the persistence queues will be emptied when the endpoint reconnect to the mqtt
+ *         broker. Two modes are possible: <b>FIFO</b> and <b>LIFO</b>.
+ *
+ *         This property is optional and the default is <b>LIFO</b>.
+ *     </li>
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.update-limit</b><br>
+ *         Limit of update messages (@update, @transaction) to be saved in the persistence queue. The queue act like a
+ *         rolled buffer and at every insertion of new messages, old messages are deleted according to this parameter.
+ *
+ *         This property is optional and the default is <b>10000</b>.
+ *     </li>
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.log-limit</b><br>
+ *         Limit of log messages (@logs) to be saved in the persistence queue. The queue act like a rolled buffer and
+ *         at every insertion of new messages, old messages are deleted according to this parameter.
+ *
+ *         This property is optional and the default is <b>10000</b>.
+ *     </li>
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.lifecycle-limit</b><br>
+ *         Limit of lifecycle messages (@nodeAdded, @nodeRemoved) to be saved in the persistence queue. The queue act
+ *         like  a rolled buffer and at every insertion of new messages, old messages are deleted according to this
+ *         parameter.
+ *
+ *         This property is optional and the default is <b>10000</b>.
+ *     </li>
+ *     <li>
  *         <b>ch.hevs.cloudio.endpoint.ssl.clientCert</b><br>
  *         Path to the client certificate file. The certificate file must be encoded in the PKCS12 key format and it
  *         needs to contain the client's certificate and the client's private key. The file has additionally to be
@@ -286,13 +315,27 @@ public class CloudioEndpoint implements CloudioEndpointService {
             node.internal.setParentNodeContainer(this.internal);
             internal.nodes.addItem(node.internal);
 
+            byte[] data = internal.messageFormat.serializeNode(node.internal);
+
             // If the endpoint is online, send node add message.
+            boolean messageSend = false;
             if (isOnline()) {
                 try {
-                    byte[] data = internal.messageFormat.serializeNode(node.internal);
                     internal.mqtt.publish("@nodeAdded/" + node.internal.getUuid(), data, 1, false);
+                    messageSend = true;
                 } catch (MqttException exception) {
                     log.error("Exception: " + exception.getMessage());
+                    exception.printStackTrace();
+                }
+            }
+            // If the message could not be send for any reason, add the message to the pending lifecycle persistence if
+            // available.
+            if (!messageSend && internal.persistence) {
+                try {
+                    CloudioPersistence.Message message
+                            = new CloudioPersistence.Message("@nodeAdded/" + node.internal.getUuid(),data);
+                    internal.cloudioPersistence.storeMessage(internal.PERSISTENCE_MQTT_LIFECYCLE, internal.lifecyclePersistenceLimit, message);
+                } catch (Exception exception) {
                     exception.printStackTrace();
                 }
             }
@@ -329,11 +372,25 @@ public class CloudioEndpoint implements CloudioEndpointService {
             node.internal.setParentNodeContainer(null);
 
             // If the endpoint is online, send the node remove message.
+            boolean messageSend = false;
             if (isOnline()) {
                 try {
                     internal.mqtt.publish("@nodeRemoved/" + node.internal.getUuid(), null, 1, false);
+                    messageSend = true;
                 } catch (MqttException exception) {
                     log.error("Exception: " + exception.getMessage());
+                    exception.printStackTrace();
+                }
+            }
+
+            // If the message could not be send for any reason, add the message to the pending lifecycle persistence if
+            // available.
+            if (!messageSend && internal.persistence) {
+                try {
+                    CloudioPersistence.Message message
+                            = new CloudioPersistence.Message("@nodeRemoved/" + node.internal.getUuid(), null);
+                    internal.cloudioPersistence.storeMessage(internal.PERSISTENCE_MQTT_LIFECYCLE, internal.lifecyclePersistenceLimit, message);
+                } catch (Exception exception) {
                     exception.printStackTrace();
                 }
             }
@@ -410,6 +467,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MQTT_UPDATE_LIMIT_DEFAULT       = "10000";
         private static final String MQTT_LOG_LIMIT_PROPERTY         = "ch.hevs.cloudio.endpoint.log-limit";
         private static final String MQTT_LOG_LIMIT_DEFAULT          = "10000";
+        private static final String MQTT_LIFECYCLE_LIMIT_PROPERTY   = "ch.hevs.cloudio.endpoint.lifecycle-limit";
+        private static final String MQTT_LIFECYCLE_LIMIT_DEFAULT    = "10000";
         private static final String ENDPOINT_IDENTITY_FILE_TYPE     = "PKCS12";
         private static final String ENDPOINT_IDENTITY_MANAGER_TYPE  = "SunX509";
         private static final String ENDPOINT_IDENTITY_FILE_PROPERTY = "ch.hevs.cloudio.endpoint.ssl.clientCert";
@@ -437,6 +496,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String PERSISTENCE_LOG_LEVEL           = "logLevel";
         private static final String PERSISTENCE_MQTT_UPDATE         = "cloudioPersistenceUpdate";
         private static final String PERSISTENCE_MQTT_LOG            = "cloudioPersistenceLog";
+        private static final String PERSISTENCE_MQTT_LIFECYCLE      = "cloudioPersistenceLifecycle";
 
         /**
          * Characters prohibited in the UUID.
@@ -463,6 +523,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private CloudioPersistence cloudioPersistence;
         private int updatePersistenceLimit;
         private int logPersistenceLimit;
+        private int lifecyclePersistenceLimit;
 
         public InternalEndpoint(String uuidOrAppName, CloudioEndpointConfiguration configuration, CloudioEndpointListener listener)
                 throws InvalidUuidException, InvalidPropertyException, CloudioEndpointInitializationException {
@@ -618,6 +679,15 @@ public class CloudioEndpoint implements CloudioEndpointService {
                         "must be a valid integer number");
             }
 
+            try {
+                lifecyclePersistenceLimit = Integer.parseInt(
+                        configuration.getProperty(MQTT_LIFECYCLE_LIMIT_PROPERTY, MQTT_LIFECYCLE_LIMIT_DEFAULT));
+            } catch (NumberFormatException exception) {
+                throw new InvalidPropertyException("Invalid persistence limit for lifecycle messages" +
+                        "(ch.hevs.cloudio.endpoint.lifecycle-limit), " +
+                        "must be a valid integer number");
+            }
+
             // Last will is a message with the UUID of the endpoint and no payload.
             options.setWill("@offline/" + uuidOrAppName, new byte[0], 1, false);
 
@@ -679,7 +749,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                 // Try to send the message if the MQTT client is connected.
                 boolean messageSend = false;
-                if (mqtt.isConnected()) {
+                if (isOnline()) {
                     try {
                         mqtt.publish("@update/" + attribute.getUuid().toString(), data, 1, true);
                         messageSend = true;
@@ -835,7 +905,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                 synchronized (cloudioPersistence) {
 
                                                     String messageCategories[] = {PERSISTENCE_MQTT_UPDATE,
-                                                            PERSISTENCE_MQTT_LOG};
+                                                            PERSISTENCE_MQTT_LOG, PERSISTENCE_MQTT_LIFECYCLE};
                                                     for(String messageCategory: messageCategories) {
 
                                                         while (mqtt.isConnected() && cloudioPersistence.messageCount(messageCategory)!=0) {
@@ -843,7 +913,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                             CloudioPersistence.Message message;
 
                                                             message = cloudioPersistence.getPendingMessage(messageCategory);
-
+                                                            
                                                             // Get the pending update persistent object from store.
                                                             byte[] data = message.data;
                                                             String topic = message.topic;
@@ -1015,7 +1085,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 byte[] data = messageFormat.serializeTransaction(transaction);
                 boolean messageSend = false;
 
-                if (mqtt.isConnected()) {
+                if (isOnline()) {
                     try {
                         mqtt.publish("@transaction/" + uuid, data, 1, true);
                         messageSend = true;
@@ -1082,7 +1152,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
             // Try to send the message if the MQTT client is connected.
             boolean messageSend = false;
-            if (mqtt.isConnected()) {
+            if (isOnline()) {
                 try {
                     mqtt.publish("@logs/" + uuid, data, 1, false);
                     messageSend = true;
