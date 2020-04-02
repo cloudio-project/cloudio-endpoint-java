@@ -15,12 +15,9 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
     private DB dbPersistenceData;
     private ConcurrentMap propertyMap;
 
-    private boolean persistenceQueueFifo;
-
-    CloudioMapdbPersistence(String PERSISTENCE_FILE, String PERSISTENCE_NAME, boolean persistenceQueueFifo){
+    CloudioMapdbPersistence(String PERSISTENCE_FILE, String PERSISTENCE_NAME){
         this.PERSISTENCE_FILE = PERSISTENCE_FILE;
         this.PERSISTENCE_NAME = PERSISTENCE_NAME;
-        this.persistenceQueueFifo = persistenceQueueFifo;
 
     }
 
@@ -69,11 +66,7 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
         ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
         Set<String> keys = map.keySet();
 
-        String key;
-        if(persistenceQueueFifo)
-            key = (String) keys.toArray()[0];
-        else
-            key = (String) keys.toArray()[keys.size()-1];
+        String key = (String) keys.toArray()[0];
 
         byte[] data = (byte[]) map.get(key);
 
@@ -120,11 +113,7 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
         ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
         Set<String> keys = map.keySet();
 
-        String key;
-        if(persistenceQueueFifo)
-            key = (String) keys.toArray()[0];
-        else
-            key = (String) keys.toArray()[keys.size()-1];
+        String key  = (String) keys.toArray()[0];
 
         map.remove(key);
         dbPersistenceData.commit();
