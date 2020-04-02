@@ -509,6 +509,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
         private final String version = "v0.2";
+        private final String[] supportedFormat = {"JSON"};
         private final NamedItemSet<CloudioNode.InternalNode> nodes = new NamedItemSet<CloudioNode.InternalNode>();
         private final MqttConnectOptions options;
         private int retryInterval;
@@ -789,6 +790,10 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
         public String getVersion(){
             return version;
+        }
+
+        public String[] getSupportedFormat(){
+            return supportedFormat;
         }
 
         /*** NamedItem Implementation *********************************************************************************/
