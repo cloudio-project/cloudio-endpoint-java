@@ -59,17 +59,21 @@ public interface CloudioPersistence {
     void storeMessage(String category, int persistenceLimit, Message message);
 
     /**
-     * Return the last/first pending message from the category
+     * Return the first pending message from the category
      *
      * @param category Message category to retrieve pending message
-     * @return
+     * @return corresponding message
      */
     Message getPendingMessage(String category);
-
-
+    
+    /**
+     * Return the xth pending message from the category
+     *
+     * @param category Message category to retrieve pending message
+     * @param index Index of the message to retrieve
+     * @return corresponding message
+     */
     Message getMessage(String category, int index);
-
-    int getLength(String category);
 
     /**
      * Remove the last/first pending message from the category
@@ -85,4 +89,11 @@ public interface CloudioPersistence {
      * @return amount of pending messages in category
      */
     long messageCount(String category);
+
+    /**
+     * Purge all the messages from the category
+     *
+     * @param category Message category to purge all the messages
+     */
+    void purgeMessages(String category);
 }

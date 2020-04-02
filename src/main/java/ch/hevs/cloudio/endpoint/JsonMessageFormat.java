@@ -6,8 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Encodes messages using JSON (JavaScript Object Notation). All messages have to start with the identifier for this
@@ -51,6 +50,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
         return outputStream.toByteArray();
     }
 
+    @Override
     public byte[] serializeDelayed(CloudioPersistence cloudioPersistence, String messageCategories[]) {
 
         ByteArrayBuilder outputStream = new ByteArrayBuilder();
@@ -58,32 +58,39 @@ class JsonMessageFormat implements CloudioMessageFormat {
             JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
 
             generator.writeStartObject();
-
-            generator.writeObjectFieldStart("messages");
+            generator.writeNumberField("timestamp", Calendar.getInstance().getTimeInMillis());
+            generator.writeFieldName("messages");
+            generator.writeStartArray();
 
             for(String messageCategory: messageCategories) {
                 CloudioPersistence.Message message;
 
-                for(int i = 0; i<cloudioPersistence.getLength(messageCategory); i++)
+                for(int i = 0; i<cloudioPersistence.messageCount(messageCategory); i++)
                 {
+                    generator.writeStartObject();
+
                     message = cloudioPersistence.getMessage(messageCategory,i);
 
                     // Get the pending update persistent object from store.
                     byte[] data = message.data;
                     String topic = message.topic;
 
-                    generator.writeFieldName(topic);
+                    generator.writeStringField("topic", topic);
+
+                    generator.writeFieldName("data");
 
                     generator.writeStartObject();
                     generator.flush();
-                    outputStream.write(data,1,data.length-1);
+                    //add the data messages from saved bytes, remove the 1st and last char which are "{" and "}"
+                    outputStream.write(data,1,data.length-2);
+
+                    generator.writeEndObject();
+                    generator.writeEndObject();
                     generator.flush();
-                    if(i!=cloudioPersistence.getLength(messageCategory)-1 || !messageCategory.equals(messageCategories[messageCategories.length-1]))
-                        outputStream.write(",".getBytes());
                 }
             }
 
-            generator.writeEndObject();
+            generator.writeEndArray();
             generator.writeEndObject();
 
             generator.flush();
@@ -93,43 +100,6 @@ class JsonMessageFormat implements CloudioMessageFormat {
         }
         return outputStream.toByteArray();
 
-    }
-
-    public byte[] serializeTest(byte[] input) {
-        ByteArrayBuilder outputStream = new ByteArrayBuilder();
-        try {
-            JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
-
-            generator.writeStartObject();
-
-            generator.writeObjectFieldStart("messages");
-
-            generator.writeFieldName("testa");
-
-            generator.writeStartObject();
-            generator.flush();
-            outputStream.write(input,1,input.length-1);
-            generator.flush();
-            outputStream.write(",".getBytes());
-
-            generator.writeFieldName("testb");
-
-            generator.writeStartObject();
-            generator.flush();
-            outputStream.write(input,1,input.length-1);
-            generator.flush();
-
-            generator.writeEndObject();
-            generator.writeEndObject();
-
-
-
-            generator.flush();
-        } catch (IOException exception) {
-            log.error("Exception: " + exception.getMessage());
-            exception.printStackTrace();
-        }
-        return outputStream.toByteArray();
     }
 
     @Override
@@ -157,9 +127,6 @@ class JsonMessageFormat implements CloudioMessageFormat {
             log.error("Exception: " + exception.getMessage());
             exception.printStackTrace();
         }
-
-        System.out.println(outputStream.toString());
-        System.out.println(outputStream.toByteArray());
         return outputStream.toByteArray();
     }
 
@@ -175,7 +142,6 @@ class JsonMessageFormat implements CloudioMessageFormat {
             exception.printStackTrace();
         }
         return outputStream.toByteArray();
-
     }
 
     @SuppressWarnings("unchecked")
@@ -253,7 +219,6 @@ class JsonMessageFormat implements CloudioMessageFormat {
                 }
             }
         }
-
     }
 
     @Override
@@ -304,7 +269,6 @@ class JsonMessageFormat implements CloudioMessageFormat {
     private void serializeNode(CloudioNode.InternalNode node, JsonGenerator generator) throws IOException {
         generator.writeStartObject();
 
-        Set<String> interfaces = node.getInterfaces();
         generator.writeArrayFieldStart("implements");
         for (String interface_ : node.getInterfaces()) {
             generator.writeString(interface_);
@@ -381,7 +345,6 @@ class JsonMessageFormat implements CloudioMessageFormat {
         generator.writeEndObject();
 
         generator.writeEndObject();
-
     }
 
 

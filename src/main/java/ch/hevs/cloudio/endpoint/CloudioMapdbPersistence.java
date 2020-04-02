@@ -100,14 +100,6 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
         return new Message(timestamp, topic, data);
     }
 
-
-    @Override
-    public int getLength(String category){
-
-        ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
-        return map.size();
-    }
-
     @Override
     public synchronized void removePendingMessage(String category) {
         ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
@@ -122,5 +114,12 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
     @Override
     public long messageCount(String category) {
         return dbPersistenceData.treeMap(category).createOrOpen().size();
+    }
+
+    @Override
+    public void purgeMessages(String category) {
+        ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
+        map.clear();
+        dbPersistenceData.commit();
     }
 }
