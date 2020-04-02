@@ -768,7 +768,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             return version;
         }
 
-        public String[] getSupportedFormat(){
+        public String[] getSupportedFormats(){
             return supportedFormat;
         }
 
