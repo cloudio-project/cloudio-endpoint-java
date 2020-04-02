@@ -15,12 +15,9 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
     private DB dbPersistenceData;
     private ConcurrentMap propertyMap;
 
-    private boolean persistenceQueueFifo;
-
-    CloudioMapdbPersistence(String PERSISTENCE_FILE, String PERSISTENCE_NAME, boolean persistenceQueueFifo){
+    CloudioMapdbPersistence(String PERSISTENCE_FILE, String PERSISTENCE_NAME){
         this.PERSISTENCE_FILE = PERSISTENCE_FILE;
         this.PERSISTENCE_NAME = PERSISTENCE_NAME;
-        this.persistenceQueueFifo = persistenceQueueFifo;
 
     }
 
@@ -69,11 +66,29 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
         ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
         Set<String> keys = map.keySet();
 
-        String key;
-        if(persistenceQueueFifo)
-            key = (String) keys.toArray()[0];
-        else
-            key = (String) keys.toArray()[keys.size()-1];
+        String key = (String) keys.toArray()[0];
+
+        byte[] data = (byte[]) map.get(key);
+
+        String[] splitKey = key.split(" ");
+
+        long timestamp = Long.parseLong(splitKey[0]);
+        String topic = splitKey[1];
+
+        return new Message(timestamp, topic, data);
+    }
+
+    @Override
+    public synchronized Message getMessage(String category, int index){
+
+        ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
+
+        if(index >= map.size())
+            throw new IndexOutOfBoundsException();
+
+        Set<String> keys = map.keySet();
+
+        String key = (String) keys.toArray()[index];
 
         byte[] data = (byte[]) map.get(key);
 
@@ -90,11 +105,7 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
         ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
         Set<String> keys = map.keySet();
 
-        String key;
-        if(persistenceQueueFifo)
-            key = (String) keys.toArray()[0];
-        else
-            key = (String) keys.toArray()[keys.size()-1];
+        String key  = (String) keys.toArray()[0];
 
         map.remove(key);
         dbPersistenceData.commit();
@@ -103,5 +114,12 @@ public class CloudioMapdbPersistence implements CloudioPersistence{
     @Override
     public long messageCount(String category) {
         return dbPersistenceData.treeMap(category).createOrOpen().size();
+    }
+
+    @Override
+    public void purgeMessages(String category) {
+        ConcurrentMap map = dbPersistenceData.treeMap(category).createOrOpen();
+        map.clear();
+        dbPersistenceData.commit();
     }
 }

@@ -6,8 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Encodes messages using JSON (JavaScript Object Notation). All messages have to start with the identifier for this
@@ -26,6 +25,14 @@ class JsonMessageFormat implements CloudioMessageFormat {
             generator.writeStartObject();
 
             List<CloudioNode.InternalNode> nodes = endpoint.getNodes();
+            generator.writeStringField("version", endpoint.getVersion());
+            generator.writeArrayFieldStart("supportedFormat");
+            for (String format : endpoint.getSupportedFormats()) {
+                generator.writeString(format);
+            }
+            generator.writeEndArray();
+
+
             generator.writeObjectFieldStart("nodes");
             for (CloudioNode.InternalNode node: nodes) {
                 generator.writeFieldName(node.getName());
@@ -41,6 +48,58 @@ class JsonMessageFormat implements CloudioMessageFormat {
             exception.printStackTrace();
         }
         return outputStream.toByteArray();
+    }
+
+    @Override
+    public byte[] serializeDelayed(CloudioPersistence cloudioPersistence, String messageCategories[]) {
+
+        ByteArrayBuilder outputStream = new ByteArrayBuilder();
+        try {
+            JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
+
+            generator.writeStartObject();
+            generator.writeNumberField("timestamp", Calendar.getInstance().getTimeInMillis());
+            generator.writeFieldName("messages");
+            generator.writeStartArray();
+
+            for(String messageCategory: messageCategories) {
+                CloudioPersistence.Message message;
+
+                for(int i = 0; i<cloudioPersistence.messageCount(messageCategory); i++)
+                {
+                    generator.writeStartObject();
+
+                    message = cloudioPersistence.getMessage(messageCategory,i);
+
+                    // Get the pending update persistent object from store.
+                    byte[] data = message.data;
+                    String topic = message.topic;
+
+                    generator.writeStringField("topic", topic);
+
+                    generator.writeFieldName("data");
+
+                    generator.writeStartObject();
+                    generator.flush();
+                    //add the data messages from saved bytes, remove the 1st and last char which are "{" and "}"
+                    outputStream.write(data,1,data.length-2);
+
+                    generator.writeEndObject();
+                    generator.writeEndObject();
+                    generator.flush();
+                }
+            }
+
+            generator.writeEndArray();
+            generator.writeEndObject();
+
+            generator.flush();
+        } catch (IOException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+        return outputStream.toByteArray();
+
     }
 
     @Override
@@ -83,7 +142,6 @@ class JsonMessageFormat implements CloudioMessageFormat {
             exception.printStackTrace();
         }
         return outputStream.toByteArray();
-
     }
 
     @SuppressWarnings("unchecked")
@@ -161,7 +219,6 @@ class JsonMessageFormat implements CloudioMessageFormat {
                 }
             }
         }
-
     }
 
     @Override
@@ -212,7 +269,6 @@ class JsonMessageFormat implements CloudioMessageFormat {
     private void serializeNode(CloudioNode.InternalNode node, JsonGenerator generator) throws IOException {
         generator.writeStartObject();
 
-        Set<String> interfaces = node.getInterfaces();
         generator.writeArrayFieldStart("implements");
         for (String interface_ : node.getInterfaces()) {
             generator.writeString(interface_);
@@ -289,7 +345,6 @@ class JsonMessageFormat implements CloudioMessageFormat {
         generator.writeEndObject();
 
         generator.writeEndObject();
-
     }
 
 

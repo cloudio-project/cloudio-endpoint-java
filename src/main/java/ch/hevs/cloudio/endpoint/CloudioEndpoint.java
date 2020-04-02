@@ -93,13 +93,6 @@ import java.util.Stack;
  *         This property is optional and the default is <b>true</b>.
  *     </li>
  *     <li>
- *         <b>ch.hevs.cloudio.endpoint.persistence-queue-type</b><br>
- *         This option configure the way the persistence queues will be emptied when the endpoint reconnect to the mqtt
- *         broker. Two modes are possible: <b>FIFO</b> and <b>LIFO</b>.
- *
- *         This property is optional and the default is <b>LIFO</b>.
- *     </li>
- *     <li>
  *         <b>ch.hevs.cloudio.endpoint.update-limit</b><br>
  *         Limit of update messages (@update, @transaction) to be saved in the persistence queue. The queue act like a
  *         rolled buffer and at every insertion of new messages, old messages are deleted according to this parameter.
@@ -459,10 +452,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MQTT_PERSISTENCE_FALSE          = "false";
         private static final String MQTT_PERSISTENCE_PROPERTY       = "ch.hevs.cloudio.endpoint.persistence";
         private static final String MQTT_PERSISTENCE_DEFAULT        = MQTT_PERSISTENCE_TRUE;
-        private static final String MQTT_PERSISTENCE_QUEUE_FIFO     = "FIFO";
-        private static final String MQTT_PERSISTENCE_QUEUE_LIFO     = "LIFO";
-        private static final String MQTT_PERSISTENCE_QUEUE_PROPERTY = "ch.hevs.cloudio.endpoint.persistence-queue-type";
-        private static final String MQTT_PERSISTENCE_QUEUE_DEFAULT  = MQTT_PERSISTENCE_QUEUE_LIFO;
         private static final String MQTT_UPDATE_LIMIT_PROPERTY      = "ch.hevs.cloudio.endpoint.update-limit";
         private static final String MQTT_UPDATE_LIMIT_DEFAULT       = "10000";
         private static final String MQTT_LOG_LIMIT_PROPERTY         = "ch.hevs.cloudio.endpoint.log-limit";
@@ -508,12 +497,13 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
+        private final String version = "v0.2";
+        private final String[] supportedFormat = {"JSON"};
         private final NamedItemSet<CloudioNode.InternalNode> nodes = new NamedItemSet<CloudioNode.InternalNode>();
         private final MqttConnectOptions options;
         private int retryInterval;
         private final MqttAsyncClient mqtt;
         private final boolean persistence;
-        private final boolean persistenceQueueFifo;
         private final CloudioMessageFormat messageFormat;
         private final List<CloudioEndpointListener> listeners = new LinkedList<CloudioEndpointListener>();
         private String jobsFilePath;
@@ -649,18 +639,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
             String persistenceProvider = configuration.getProperty(MQTT_PERSISTENCE_PROPERTY, MQTT_PERSISTENCE_DEFAULT);
             persistence = persistenceProvider.equals(MQTT_PERSISTENCE_TRUE);
 
-            String persistenceQueueProvider = configuration.getProperty(MQTT_PERSISTENCE_QUEUE_PROPERTY, MQTT_PERSISTENCE_QUEUE_DEFAULT);
-
-            if(!persistenceQueueProvider.equals(MQTT_PERSISTENCE_QUEUE_FIFO) &&
-                    !persistenceQueueProvider.equals(MQTT_PERSISTENCE_QUEUE_LIFO)){
-                throw new InvalidPropertyException("Invalid persistence queue type" +
-                        "(ch.hevs.cloudio.endpoint.persistence-queue-type), " +
-                        "must be FIFO or LIFO");
-            }
-            else{
-                persistenceQueueFifo = persistenceQueueProvider.equals(MQTT_PERSISTENCE_QUEUE_FIFO);
-            }
-
             try {
                 updatePersistenceLimit = Integer.parseInt(
                         configuration.getProperty(MQTT_UPDATE_LIMIT_PROPERTY, MQTT_UPDATE_LIMIT_DEFAULT));
@@ -710,7 +688,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 jobsFilePath = "etc/cloud.io";
             }
 
-            cloudioPersistence = new CloudioMapdbPersistence(PERSISTENCE_FILE, PERSISTENCE_PROPERTY_NAME, persistenceQueueFifo);
+            cloudioPersistence = new CloudioMapdbPersistence(PERSISTENCE_FILE, PERSISTENCE_PROPERTY_NAME);
             cloudioPersistence.open();
 
             String logLevel = (String) cloudioPersistence.getPersistentProperty(PERSISTENCE_LOG_LEVEL, "");
@@ -784,6 +762,14 @@ public class CloudioEndpoint implements CloudioEndpointService {
         @Override
         public Uuid getUuid() {
             return new TopicUuid(this);
+        }
+
+        public String getVersion(){
+            return version;
+        }
+
+        public String[] getSupportedFormats(){
+            return supportedFormat;
         }
 
         /*** NamedItem Implementation *********************************************************************************/
@@ -906,27 +892,25 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                                                     String messageCategories[] = {PERSISTENCE_MQTT_UPDATE,
                                                             PERSISTENCE_MQTT_LOG, PERSISTENCE_MQTT_LIFECYCLE};
-                                                    for(String messageCategory: messageCategories) {
 
-                                                        while (mqtt.isConnected() && cloudioPersistence.messageCount(messageCategory)!=0) {
+                                                    byte[] data = messageFormat.serializeDelayed(cloudioPersistence,messageCategories);
 
-                                                            CloudioPersistence.Message message;
+                                                    boolean messageSend = false;
 
-                                                            message = cloudioPersistence.getPendingMessage(messageCategory);
-                                                            
-                                                            // Get the pending update persistent object from store.
-                                                            byte[] data = message.data;
-                                                            String topic = message.topic;
+                                                    while (mqtt.isConnected() && !messageSend) {
+                                                        try {
+                                                            mqtt.publish("@delayed/" + internal.uuid, data, 1, true);
+                                                            messageSend = true;
+                                                        } catch (MqttException exception) {
+                                                            log.error("Exception: " + exception.getMessage());
+                                                            exception.printStackTrace();
+                                                        }
 
-                                                            // Try to send the update to the broker and remove it from the storage.
-                                                            try {
-                                                                mqtt.publish(topic, data, 1, true);
-                                                                cloudioPersistence.removePendingMessage(messageCategory);
-                                                            } catch (MqttException exception) {
-                                                                log.error("Exception: " + exception.getMessage());
-                                                                exception.printStackTrace();
-                                                            }
-
+                                                        if (messageSend) {
+                                                            for (String messageCategorie : messageCategories)
+                                                                cloudioPersistence.purgeMessages(messageCategorie);
+                                                        }
+                                                        else {
                                                             try {
                                                                 Thread.sleep(100);
                                                             } catch (InterruptedException exception) {
@@ -936,12 +920,10 @@ public class CloudioEndpoint implements CloudioEndpointService {
                                                         }
                                                     }
                                                 }
-
                                             } catch (Exception exception) {
                                                 log.error("Exception: " + exception.getMessage());
                                                 exception.printStackTrace();
                                             }
-
                                         }
                                     }).start();
                                 }
