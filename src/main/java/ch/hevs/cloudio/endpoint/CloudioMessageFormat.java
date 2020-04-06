@@ -30,6 +30,14 @@ interface CloudioMessageFormat {
     byte[] serializeAttribute(CloudioAttribute.InternalAttribute attribute);
 
     /**
+     * A CloudioMessageFormat implementation should return the encoded payload of the serialization of the given attribute.
+     *
+     * @param attribute Attribute to serialize.
+     * @return          Raw data representation of the attribute.
+     */
+    byte[] serializeDidSetAttribute(CloudioAttribute.InternalAttribute attribute, String correlationID);
+
+    /**
      * A CloudioMessageFormat implementation should return the encoded payload of the serialization of messages from the
      * messageCategories inside the given cloudioPersistence
      *
@@ -57,6 +65,9 @@ interface CloudioMessageFormat {
      */
     void deserializeAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
         throws Exception;
+
+    String deserializeSetAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
+            throws Exception;
 
     /**
      * A CloudioMessageFormat implementation should parse the data payload and update the given attribute according to the

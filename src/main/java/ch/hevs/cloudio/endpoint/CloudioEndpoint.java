@@ -667,7 +667,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             }
 
             // Last will is a message with the UUID of the endpoint and no payload.
-            options.setWill("@offline/" + uuidOrAppName, new byte[0], 1, false);
+            options.setWill("@offline/" + uuid, new byte[0], 1, false);
 
 
             // Create the MQTT client.
@@ -721,7 +721,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
             if(internal.inTransaction){
                 internal.transaction.addAttribute(attribute);
             }
-            else {
+            else if(attribute.getConstraint() == CloudioAttributeConstraint.Measure ||
+                    attribute.getConstraint() == CloudioAttributeConstraint.Status){
+
                 // Create the MQTT message using the given message format.
                 byte[] data = messageFormat.serializeAttribute(attribute);
 
@@ -1044,7 +1046,37 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     CloudioAttribute.InternalAttribute attribute = node.findAttribute(location);
                     if (attribute != null) {
                         // Deserialize the message into the attribute.
-                        messageFormat.deserializeAttribute(data, attribute);
+                        String correlationID = messageFormat.deserializeSetAttribute(data, attribute);
+                        System.out.println(correlationID);
+
+                        byte[] dataDidSet = messageFormat.serializeDidSetAttribute(attribute, correlationID);
+
+                        boolean messageSend = false;
+                        if (isOnline()) {
+                            try {
+                                mqtt.publish("@didSet/" + attribute.getUuid().toString(), dataDidSet, 1, true);
+                                messageSend = true;
+                            } catch (MqttException exception) {
+                                log.error("Exception :" + exception.getMessage());
+                                exception.printStackTrace();
+                            }
+                        }
+
+                        // If the message could not be send for any reason, add the message to the pending updates persistence if
+                        // available.
+                        if (!messageSend && persistence) {
+                            try {
+                                CloudioPersistence.Message message
+                                        = new CloudioPersistence.Message("@didSet/"+ attribute.getUuid().toString(),dataDidSet);
+
+                                cloudioPersistence.storeMessage(PERSISTENCE_MQTT_UPDATE, updatePersistenceLimit, message);
+                            } catch (Exception exception) {
+                                log.error("Exception :" + exception.getMessage());
+                                exception.printStackTrace();
+                            }
+                        }
+
+
                     } else {
                         log.error("Attribute at \"" + topic + "\" not found!");
                     }

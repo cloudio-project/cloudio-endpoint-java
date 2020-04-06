@@ -131,6 +131,32 @@ class JsonMessageFormat implements CloudioMessageFormat {
     }
 
     @Override
+    public byte[] serializeDidSetAttribute(CloudioAttribute.InternalAttribute attribute, String correlationID) {
+        ByteArrayBuilder outputStream = new ByteArrayBuilder();
+        try {
+            JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
+            serializeAttribute(attribute, generator);
+
+            generator.writeStartObject();
+
+            generator.writeStringField("correlationID", correlationID);
+
+            java.lang.Object value = attribute.getValue();
+            if (value != null) {
+                generator.writeObjectField("value", attribute.getValue());
+            }
+
+            generator.writeEndObject();
+
+            generator.flush();
+        } catch (IOException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+        return outputStream.toByteArray();
+    }
+
+    @Override
     public byte[] serializeTransaction(Transaction transaction){
         ByteArrayBuilder outputStream = new ByteArrayBuilder();
         try {
@@ -189,6 +215,26 @@ class JsonMessageFormat implements CloudioMessageFormat {
                 }
             }
         }
+    }
+
+    @Override
+    public String deserializeSetAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
+            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+        String correlationID = "";
+
+        this.deserializeAttribute(data, attribute);
+
+        JsonParser parser = new JsonFactory().createParser(data);
+        if (parser.nextToken() == JsonToken.START_OBJECT) {
+
+            while (parser.nextToken() != JsonToken.END_OBJECT) {
+                String fieldName = parser.getCurrentName();
+                if ("correlationID".equals(fieldName)) {
+                    correlationID = parser.getText();
+                }
+            }
+        }
+        return correlationID;
     }
 
     @Override
