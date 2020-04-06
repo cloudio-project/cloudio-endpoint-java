@@ -30,10 +30,12 @@ interface CloudioMessageFormat {
     byte[] serializeAttribute(CloudioAttribute.InternalAttribute attribute);
 
     /**
-     * A CloudioMessageFormat implementation should return the encoded payload of the serialization of the given attribute.
+     * A CloudioMessageFormat implementation should return the encoded payload of the serialization of the given
+     * set attribute.
      *
      * @param attribute Attribute to serialize.
-     * @return          Raw data representation of the attribute.
+     * @param correlationID correlation ID of the @set message
+     * @return          Raw data representation of the set attribute linked to its correlation ID.
      */
     byte[] serializeDidSetAttribute(CloudioAttribute.InternalAttribute attribute, String correlationID);
 
@@ -66,6 +68,14 @@ interface CloudioMessageFormat {
     void deserializeAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
         throws Exception;
 
+    /**
+     * A CloudioMessageFormat implementation should parse the data payload and set the given attribute according to the
+     * data and return the correlation ID of the set message.
+     * @param data                              Data received in the MQTT message.
+     * @param attribute                         Attribute to update using the raw message data.
+     * @return correlation ID contained in the MQTT message
+     * @throws Exception                        If the attribute can not be updated from the cloud for any reason.
+     */
     String deserializeSetAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
             throws Exception;
 
