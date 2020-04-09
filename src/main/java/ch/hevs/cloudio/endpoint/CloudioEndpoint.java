@@ -480,7 +480,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String SSL_VERIFY_HOSTNAME_DEFAULT     = "true";
 
         /*** MapDB parameters******************************************************************************************/
-        private static final String PERSISTENCE_FILE                = "cloudiOPersistenceData.db";
         private static final String PERSISTENCE_PROPERTY_NAME       = "cloudioPersistenceProperties";
         private static final String PERSISTENCE_LOG_LEVEL           = "logLevel";
         private static final String PERSISTENCE_MQTT_UPDATE         = "cloudioPersistenceUpdate";
@@ -511,6 +510,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private Transaction transaction = new Transaction();
 
         private CloudioPersistence cloudioPersistence;
+        private String persistenceFile;
         private int updatePersistenceLimit;
         private int logPersistenceLimit;
         private int lifecyclePersistenceLimit;
@@ -552,6 +552,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     throw new InvalidUuidException(String.format("uuid(value:'%s') contains the invalid char 'UTF+%04X'",  uuid, (int)c));
                 }
             }
+
+            persistenceFile = uuid+"-persistence.db";
 
             // Add the listener if present.
             if (listener != null) {
@@ -688,7 +690,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 jobsFilePath = "etc/cloud.io";
             }
 
-            cloudioPersistence = new CloudioMapdbPersistence(PERSISTENCE_FILE, PERSISTENCE_PROPERTY_NAME);
+            cloudioPersistence = new CloudioMapdbPersistence(persistenceFile, PERSISTENCE_PROPERTY_NAME);
             cloudioPersistence.open();
 
             String logLevel = (String) cloudioPersistence.getPersistentProperty(PERSISTENCE_LOG_LEVEL, "");
