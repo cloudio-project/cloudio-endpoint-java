@@ -480,7 +480,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String SSL_VERIFY_HOSTNAME_DEFAULT     = "true";
 
         /*** MapDB parameters******************************************************************************************/
-        private static final String PERSISTENCE_FILE                = "cloudiOPersistenceData.db";
         private static final String PERSISTENCE_PROPERTY_NAME       = "cloudioPersistenceProperties";
         private static final String PERSISTENCE_LOG_LEVEL           = "logLevel";
         private static final String PERSISTENCE_MQTT_UPDATE         = "cloudioPersistenceUpdate";
@@ -498,7 +497,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
         private final String version = "v0.2";
-        private final String[] supportedFormat = {"JSON"};
+        private final String[] supportedFormats = {"JSON"};
         private final NamedItemSet<CloudioNode.InternalNode> nodes = new NamedItemSet<CloudioNode.InternalNode>();
         private final MqttConnectOptions options;
         private int retryInterval;
@@ -511,6 +510,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private Transaction transaction = new Transaction();
 
         private CloudioPersistence cloudioPersistence;
+        private String persistenceFile;
         private int updatePersistenceLimit;
         private int logPersistenceLimit;
         private int lifecyclePersistenceLimit;
@@ -552,6 +552,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     throw new InvalidUuidException(String.format("uuid(value:'%s') contains the invalid char 'UTF+%04X'",  uuid, (int)c));
                 }
             }
+
+            persistenceFile = uuid+"-persistence.db";
 
             // Add the listener if present.
             if (listener != null) {
@@ -667,7 +669,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             }
 
             // Last will is a message with the UUID of the endpoint and no payload.
-            options.setWill("@offline/" + uuidOrAppName, new byte[0], 1, false);
+            options.setWill("@offline/" + uuid, new byte[0], 1, false);
 
 
             // Create the MQTT client.
@@ -688,7 +690,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 jobsFilePath = "etc/cloud.io";
             }
 
-            cloudioPersistence = new CloudioMapdbPersistence(PERSISTENCE_FILE, PERSISTENCE_PROPERTY_NAME);
+            cloudioPersistence = new CloudioMapdbPersistence(persistenceFile, PERSISTENCE_PROPERTY_NAME);
             cloudioPersistence.open();
 
             String logLevel = (String) cloudioPersistence.getPersistentProperty(PERSISTENCE_LOG_LEVEL, "");
@@ -721,7 +723,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
             if(internal.inTransaction){
                 internal.transaction.addAttribute(attribute);
             }
-            else {
+            else if(attribute.getConstraint() == CloudioAttributeConstraint.Measure ||
+                    attribute.getConstraint() == CloudioAttributeConstraint.Status){
+
                 // Create the MQTT message using the given message format.
                 byte[] data = messageFormat.serializeAttribute(attribute);
 
@@ -769,7 +773,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
 
         public String[] getSupportedFormats(){
-            return supportedFormat;
+            return supportedFormats;
         }
 
         /*** NamedItem Implementation *********************************************************************************/
@@ -1044,7 +1048,36 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     CloudioAttribute.InternalAttribute attribute = node.findAttribute(location);
                     if (attribute != null) {
                         // Deserialize the message into the attribute.
-                        messageFormat.deserializeAttribute(data, attribute);
+                        String correlationID = messageFormat.deserializeSetAttribute(data, attribute);
+
+                        byte[] dataDidSet = messageFormat.serializeDidSetAttribute(attribute, correlationID);
+
+                        boolean messageSend = false;
+                        if (isOnline()) {
+                            try {
+                                mqtt.publish("@didSet/" + attribute.getUuid().toString(), dataDidSet, 1, true);
+                                messageSend = true;
+                            } catch (MqttException exception) {
+                                log.error("Exception :" + exception.getMessage());
+                                exception.printStackTrace();
+                            }
+                        }
+
+                        // If the message could not be send for any reason, add the message to the pending updates persistence if
+                        // available.
+                        if (!messageSend && persistence) {
+                            try {
+                                CloudioPersistence.Message message
+                                        = new CloudioPersistence.Message("@didSet/"+ attribute.getUuid().toString(),dataDidSet);
+
+                                cloudioPersistence.storeMessage(PERSISTENCE_MQTT_UPDATE, updatePersistenceLimit, message);
+                            } catch (Exception exception) {
+                                log.error("Exception :" + exception.getMessage());
+                                exception.printStackTrace();
+                            }
+                        }
+
+
                     } else {
                         log.error("Attribute at \"" + topic + "\" not found!");
                     }
