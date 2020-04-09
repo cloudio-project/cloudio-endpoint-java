@@ -1049,7 +1049,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     if (attribute != null) {
                         // Deserialize the message into the attribute.
                         String correlationID = messageFormat.deserializeSetAttribute(data, attribute);
-                        System.out.println(correlationID);
 
                         byte[] dataDidSet = messageFormat.serializeDidSetAttribute(attribute, correlationID);
 

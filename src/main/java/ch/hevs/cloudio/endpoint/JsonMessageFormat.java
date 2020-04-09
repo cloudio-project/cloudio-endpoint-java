@@ -140,6 +140,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
             generator.writeStartObject();
 
             generator.writeStringField("correlationID", correlationID);
+            generator.writeNumberField("timestamp", Calendar.getInstance().getTimeInMillis());
 
             java.lang.Object value = attribute.getValue();
             if (value != null) {
