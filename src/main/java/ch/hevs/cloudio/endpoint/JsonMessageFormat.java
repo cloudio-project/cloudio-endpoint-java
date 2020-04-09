@@ -26,7 +26,7 @@ class JsonMessageFormat implements CloudioMessageFormat {
 
             List<CloudioNode.InternalNode> nodes = endpoint.getNodes();
             generator.writeStringField("version", endpoint.getVersion());
-            generator.writeArrayFieldStart("supportedFormat");
+            generator.writeArrayFieldStart("supportedFormats");
             for (String format : endpoint.getSupportedFormats()) {
                 generator.writeString(format);
             }
