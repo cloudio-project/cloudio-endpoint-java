@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.util.Calendar;
 
 /**
  * Encodes messages using the Jackson serialization API. The actual format is determined by the passed factory instance. If a JsonFactory object is passed,
@@ -87,6 +88,83 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
     }
 
     @Override
+    public byte[] serializeDidSetAttribute(CloudioAttribute.InternalAttribute attribute, String correlationID) {
+        ByteArrayBuilder outputStream = new ByteArrayBuilder();
+        try {
+            JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
+            serializeAttribute(attribute, generator);
+
+            generator.writeStartObject();
+
+            generator.writeStringField("correlationID", correlationID);
+            generator.writeNumberField("timestamp", Calendar.getInstance().getTimeInMillis());
+
+            java.lang.Object value = attribute.getValue();
+            if (value != null) {
+                generator.writeObjectField("value", attribute.getValue());
+            }
+
+            generator.writeEndObject();
+
+            generator.flush();
+        } catch (IOException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+        return outputStream.toByteArray();
+    }
+
+    @Override
+    public byte[] serializeDelayed(CloudioPersistence cloudioPersistence, String[] messageCategories) {
+        ByteArrayBuilder outputStream = new ByteArrayBuilder();
+        try {
+            JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
+
+            generator.writeStartObject();
+            generator.writeNumberField("timestamp", Calendar.getInstance().getTimeInMillis());
+            generator.writeFieldName("messages");
+            generator.writeStartArray();
+
+            for(String messageCategory: messageCategories) {
+                CloudioPersistence.Message message;
+
+                for(int i = 0; i<cloudioPersistence.messageCount(messageCategory); i++)
+                {
+                    generator.writeStartObject();
+
+                    message = cloudioPersistence.getMessage(messageCategory,i);
+
+                    // Get the pending update persistent object from store.
+                    byte[] data = message.data;
+                    String topic = message.topic;
+
+                    generator.writeStringField("topic", topic);
+
+                    generator.writeFieldName("data");
+
+                    generator.writeStartObject();
+                    generator.flush();
+                    //add the data messages from saved bytes, remove the 1st and last char which are "{" and "}"
+                    outputStream.write(data,1,data.length-2);
+
+                    generator.writeEndObject();
+                    generator.writeEndObject();
+                    generator.flush();
+                }
+            }
+
+            generator.writeEndArray();
+            generator.writeEndObject();
+
+            generator.flush();
+        } catch (IOException exception) {
+            log.error("Exception: " + exception.getMessage());
+            exception.printStackTrace();
+        }
+        return outputStream.toByteArray();
+    }
+
+    @Override
     public byte[] serializeTransaction(Transaction transaction) {
         ByteArrayBuilder outputStream = new ByteArrayBuilder();
         try {
@@ -145,6 +223,26 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
                 }
             }
         }
+    }
+
+    @Override
+    public String deserializeSetAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
+            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+        String correlationID = "";
+
+        this.deserializeAttribute(data, attribute);
+
+        JsonParser parser = new JsonFactory().createParser(data);
+        if (parser.nextToken() == JsonToken.START_OBJECT) {
+
+            while (parser.nextToken() != JsonToken.END_OBJECT) {
+                String fieldName = parser.getCurrentName();
+                if ("correlationID".equals(fieldName)) {
+                    correlationID = parser.getText();
+                }
+            }
+        }
+        return correlationID;
     }
 
     @Override

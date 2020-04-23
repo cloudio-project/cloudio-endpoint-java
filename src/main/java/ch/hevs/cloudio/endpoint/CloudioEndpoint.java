@@ -1162,7 +1162,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         @Override
         public void sendLogMessage(CloudioLogMessage cloudioLogMessage) {
 
-            byte[] data = messageFormat.serializeCloudioLog(cloudioLogMessage);
+            byte[] data = messageFormat.serializeCloudioLogMessage(cloudioLogMessage);
 
             // Try to send the message if the MQTT client is connected.
             boolean messageSend = false;
