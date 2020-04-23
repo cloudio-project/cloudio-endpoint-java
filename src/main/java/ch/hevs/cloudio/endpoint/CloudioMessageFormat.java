@@ -2,7 +2,7 @@ package ch.hevs.cloudio.endpoint;
 
 /**
  * The CloudioMessageFormat interface declares the methods that are used by the {@link CloudioEndpoint} implementation in order to
- * encode and decode attribute changes into MQTT messages.
+ * encode and decode local cloud.iO objects and attributes into MQTT messages and vice-versa.
  */
 interface CloudioMessageFormat {
     /**
@@ -27,7 +27,7 @@ interface CloudioMessageFormat {
      * @param attribute Attribute to serialize.
      * @return          Raw data representation of the attribute.
      */
-    byte[] serializeAttribute(CloudioAttribute.InternalAttribute attribute);
+    byte[] serializeAttribute(CloudioAttribute<?>.InternalAttribute attribute);
 
     /**
      * A CloudioMessageFormat implementation should return the encoded payload of the serialization of the given
@@ -107,7 +107,7 @@ interface CloudioMessageFormat {
      * @param cloudioLogMessage CloudioLogMessage to serialize.
      * @return                  Raw data representation of the CloudioLogMessage.
      */
-    byte[] serializeCloudioLog(CloudioLogMessage cloudioLogMessage);
+    byte[] serializeCloudioLogMessage(CloudioLogMessage cloudioLogMessage);
 
     /**
      * A CloudioMessageFormat implementation should return the encoded payload of the serialization of the given job line output.

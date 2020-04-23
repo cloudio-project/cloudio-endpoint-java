@@ -127,4 +127,69 @@ public class ResourceLoader {
         // The resource was found in none of the given locations.
         throw new FileNotFoundException(filename);
     }
+
+    /**
+     * Locates the requested resource and returns it's content if the requested resource could be located, otherwise an
+     * exception will be thrown. See {@link ResourceLoader} for supported URI schemes.
+     *
+     * @param location                  Location as URI of the resource/file.
+     * @param target                    The object which will use the resource, this is only important when the URI
+     *                                  scheme is "classpath" as the class loader of the given class will be used
+     *                                  in order to find the resource.
+     * @return                          Content of the resource.
+     * @throws FileNotFoundException    If the file could not be found.
+     * @throws URISyntaxException       The syntax of the given URI is invalid.
+     * @throws MalformedURLException    The URL in the case the scheme is http is invalid.
+     * @throws IOException              Any other exception that can happen during opening a resource.
+     */
+    public static byte[] getContent(final String location, final Object target)
+        throws URISyntaxException, IOException {
+        return getContent(new URI(location), target);
+    }
+
+    /**
+     * Locates the requested resource and returns it's content if the requested resource could be located, otherwise an
+     * exception will be thrown. See {@link ResourceLoader} for supported URI schemes.
+     *
+     * @param uri                       Location of the resource/file.
+     * @param target                    The object which will use the resource, this is only important when the URI
+     *                                  scheme is "classpath" as the class loader of the given class will be used
+     *                                  in order to find the resource.
+     * @return                          Content of the resource.
+     * @throws FileNotFoundException    If the file could not be found.
+     * @throws URISyntaxException       The syntax of the given URI is invalid.
+     * @throws MalformedURLException    The URL in the case the scheme is http is invalid.
+     * @throws IOException              Any other exception that can happen during opening a resource.
+     */
+    public static byte[] getContent(final URI uri, final Object target) throws URISyntaxException, IOException {
+        return readContent(getResource(uri, target));
+    }
+
+    /**
+     * Tries to read the resources content for the given file name by trying to open the stream from the given locations
+     * one after another. Once the file could be found in one of the given locations, the content of that resource is
+     * returned. See {@link ResourceLoader} for supported URI schemes.
+     *
+     * @param filename                  File name of the resource to open.
+     * @param target                    The object which will use the resource, this is only important when the URI
+     *                                  scheme is "classpath" as the class loader of the given class will be used
+     *                                  in order to find the resource.
+     * @param locations                 All the locations as URIs to search for.
+     * @return                          Content of the resource.
+     * @throws FileNotFoundException    If the file could not be found in any of the given locations.
+     * @throws IOException              If the file could not be read.
+     */
+    public static byte[] getContentFromLocations(String filename, Object target, String... locations) throws IOException {
+        return readContent(getResourceFromLocations(filename, target, locations));
+    }
+
+    private static byte[] readContent(InputStream input) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int length;
+        while ((length = input.read(buffer)) != -1) {
+            output.write(buffer, 0, length);
+        }
+        return output.toByteArray();
+    }
 }
