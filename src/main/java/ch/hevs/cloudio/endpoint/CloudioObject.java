@@ -104,14 +104,7 @@ public class CloudioObject {
                             field.getType() != long.class &&
                             field.getType() != float.class &&
                             field.getType() != double.class &&
-                            field.getType() != String.class &&
-                            field.getType() != boolean[].class &&
-                            field.getType() != short[].class &&
-                            field.getType() != int[].class &&
-                            field.getType() != long[].class &&
-                            field.getType() != float[].class &&
-                            field.getType() != double[].class &&
-                            field.getType() != String[].class) {
+                            field.getType() != String.class) {
                             throw new InvalidCloudioAttributeException(field.getType());
                         }
                     }
@@ -265,115 +258,6 @@ public class CloudioObject {
                                 attribute.setParent(this);
                                 try {
                                     attribute.setStaticValue((String) field.get(CloudioObject.this));
-                                } catch (CloudioAttributeConstraintException exception) {
-                                    log.error("Exception: " + exception.getMessage());
-                                    exception.printStackTrace();
-                                }
-                                try {
-                                    attributes.addItem(attribute);
-                                } catch (DuplicateItemException exception) {
-                                    throw new CloudioModificationException("Duplicate name for fields, " +
-                                        "your Java compiler sucks ;-)");
-                                }
-                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
-                                log.error("Exception: " + exception.getMessage());
-                                exception.printStackTrace();
-                            }
-                        } else if (field.getType() == boolean[].class) {
-                            CloudioAttribute<boolean[]>.InternalAttribute attribute = new CloudioAttribute<boolean[]>().internal;
-                            try {
-                                attribute.setConstraint(CloudioAttributeConstraint.Static);
-                                attribute.setType(Boolean[].class);
-                                attribute.setName(field.getName());
-                                attribute.setParent(this);
-                                try {
-                                    attribute.setStaticValue((boolean[]) field.get(CloudioObject.this));
-                                } catch (CloudioAttributeConstraintException exception) {
-                                    log.error("Exception: " + exception.getMessage());
-                                    exception.printStackTrace();
-                                }
-                                try {
-                                    attributes.addItem(attribute);
-                                } catch (DuplicateItemException e) {
-                                    throw new CloudioModificationException("Duplicate name for fields, " +
-                                        "your Java compiler sucks ;-)");
-                                }
-                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
-                                log.error("Exception: " + exception.getMessage());
-                                exception.printStackTrace();
-                            }
-
-                            // ...of a supported integer type, then create a integer attribute on the fly.
-                        } else if (field.getType() == short[].class || field.getType() == int[].class ||
-                            field.getType() == long[].class) {
-                            CloudioAttribute<long[]>.InternalAttribute attribute = new CloudioAttribute<long[]>().internal;
-                            try {
-                                attribute.setConstraint(CloudioAttributeConstraint.Static);
-                                attribute.setType(Long[].class);
-                                attribute.setName(field.getName());
-                                attribute.setParent(this);
-                                try {
-                                    Object value = field.get(CloudioObject.this);
-                                    long[] longs = new long[Array.getLength(value)];
-                                    for (int i = 0; i < longs.length; ++i) {
-                                        longs[i] = ((Number) Array.get(value, i)).longValue();
-                                    }
-                                    attribute.setStaticValue(longs);
-                                } catch (CloudioAttributeConstraintException exception) {
-                                    log.error("Exception: " + exception.getMessage());
-                                    exception.printStackTrace();
-                                }
-                                try {
-                                    attributes.addItem(attribute);
-                                } catch (DuplicateItemException e) {
-                                    throw new CloudioModificationException("Duplicate name for fields, " +
-                                        "your Java compiler sucks ;-)");
-                                }
-                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
-                                log.error("Exception: " + exception.getMessage());
-                                exception.printStackTrace();
-                            }
-
-                            // ...of a supported floating point type, then create a number attribute on the fly.
-                        } else if (field.getType() == float[].class || field.getType() == double[].class) {
-                            CloudioAttribute<double[]>.InternalAttribute attribute = new CloudioAttribute<double[]>().internal;
-                            try {
-                                attribute.setConstraint(CloudioAttributeConstraint.Static);
-                                attribute.setType(Double[].class);
-                                attribute.setName(field.getName());
-                                attribute.setParent(this);
-                                try {
-                                    Object value = field.get(CloudioObject.this);
-                                    double[] doubles = new double[Array.getLength(value)];
-                                    for (int i = 0; i < doubles.length; ++i) {
-                                        doubles[i] = ((Number) Array.get(value, i)).doubleValue();
-                                    }
-                                    attribute.setStaticValue(doubles);
-                                } catch (CloudioAttributeConstraintException exception) {
-                                    log.error("Exception: " + exception.getMessage());
-                                    exception.printStackTrace();
-                                }
-                                try {
-                                    attributes.addItem(attribute);
-                                } catch (DuplicateItemException exception) {
-                                    throw new CloudioModificationException("Duplicate name for fields, " +
-                                        "your Java compiler sucks ;-)");
-                                }
-                            } catch (InvalidCloudioAttributeException | IllegalAccessException exception) {
-                                log.error("Exception: " + exception.getMessage());
-                                exception.printStackTrace();
-                            }
-
-                            // ...of string type, then create a String attribute on the fly.
-                        } else if (field.getType() == String[].class) {
-                            CloudioAttribute<String[]>.InternalAttribute attribute = new CloudioAttribute<String[]>().internal;
-                            try {
-                                attribute.setConstraint(CloudioAttributeConstraint.Static);
-                                attribute.setType(String[].class);
-                                attribute.setName(field.getName());
-                                attribute.setParent(this);
-                                try {
-                                    attribute.setStaticValue((String[]) field.get(CloudioObject.this));
                                 } catch (CloudioAttributeConstraintException exception) {
                                     log.error("Exception: " + exception.getMessage());
                                     exception.printStackTrace();

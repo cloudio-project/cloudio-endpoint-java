@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 
 public class CborMessageFormatTest {
-    private CloudioMessageFormat cbor = new GenericJacksonMessageFormat.CBOR();
+    private final CloudioMessageFormat cbor = new GenericJacksonMessageFormat.CBOR();
 
     @Test
     public void serializeTestNode() throws CloudioAttributeInitializationException, CloudioAttributeConstraintException, IOException, URISyntaxException {
