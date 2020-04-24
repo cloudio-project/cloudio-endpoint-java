@@ -4,23 +4,20 @@ class CloudioMessageFormatFactory {
     static CloudioMessageFormat json;
     static CloudioMessageFormat cbor;
 
-    static CloudioMessageFormat massageFormat(int messageFormatId) {
-        switch (messageFormatId) {
-            case '{':
-                if (json == null) json = new GenericJacksonMessageFormat.JSON();
-                return json;
-
-            case 'c':
-                if (cbor == null) cbor = new GenericJacksonMessageFormat.CBOR();
-                return cbor;
-
-            default:
-                return null;
+    static CloudioMessageFormat messageFormat(int messageFormatId) {
+        if (messageFormatId == '{') {
+            if (json == null) json = new GenericJacksonMessageFormat.JSON();
+            return json;
+        } else if ((messageFormatId & 0b11100000) == 0b10100000) {
+            if (cbor == null) cbor = new GenericJacksonMessageFormat.CBOR();
+            return cbor;
+        } else {
+            return null;
         }
     }
 
     static CloudioMessageFormat messageFormat(String messageFormatName) {
-        switch (messageFormatName) {
+        switch (messageFormatName.toLowerCase()) {
             case "json":
                 if (json == null) json = new GenericJacksonMessageFormat.JSON();
                 return json;

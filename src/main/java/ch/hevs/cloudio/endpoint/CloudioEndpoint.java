@@ -497,7 +497,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
         private final String version = "v0.2";
-        private final String[] supportedFormats = {"JSON"};
+        private final String[] supportedFormats = {"CBOR", "JSON"};
         private final NamedItemSet<CloudioNode.InternalNode> nodes = new NamedItemSet<CloudioNode.InternalNode>();
         private final MqttConnectOptions options;
         private int retryInterval;
@@ -805,7 +805,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 byte[] data = message.getPayload();
 
                 // First determine the message format (first byte identifies the message format).
-                CloudioMessageFormat messageFormat = CloudioMessageFormatFactory.massageFormat(message.getPayload()[0]);
+                CloudioMessageFormat messageFormat = CloudioMessageFormatFactory.messageFormat(message.getPayload()[0]);
                 if (messageFormat == null) {
                     log.error("Message-format " + (int)message.getPayload()[0] + " not supported!");
                     return;
