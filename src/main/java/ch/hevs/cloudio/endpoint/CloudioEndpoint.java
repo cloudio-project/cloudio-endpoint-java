@@ -497,7 +497,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
         private final String version = "v0.2";
-        private final String[] supportedFormats = {"JSON"};
+        private final String[] supportedFormats = {"CBOR", "JSON"};
         private final NamedItemSet<CloudioNode.InternalNode> nodes = new NamedItemSet<CloudioNode.InternalNode>();
         private final MqttConnectOptions options;
         private int retryInterval;
@@ -562,9 +562,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
             // Create message format instance.
             String messageFormatId = configuration.getProperty(MESSAGE_FORMAT, MESSAGE_FORMAT_DEFAULT);
-            if ("json".equals(messageFormatId)) {
-                messageFormat = new JsonMessageFormat();
-            } else {
+            messageFormat = CloudioMessageFormatFactory.messageFormat(messageFormatId);
+            if (messageFormat == null) {
                 throw new InvalidPropertyException("Unknown message format (ch.hevs.cloudio.endpoint.messageFormat): " +
                         "\"" + messageFormatId + "\"");
             }
@@ -806,7 +805,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 byte[] data = message.getPayload();
 
                 // First determine the message format (first byte identifies the message format).
-                CloudioMessageFormat messageFormat = CloudioMessageFormatFactory.massageFormat(message.getPayload()[0]);
+                CloudioMessageFormat messageFormat = CloudioMessageFormatFactory.messageFormat(message.getPayload()[0]);
                 if (messageFormat == null) {
                     log.error("Message-format " + (int)message.getPayload()[0] + " not supported!");
                     return;
@@ -1163,7 +1162,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         @Override
         public void sendLogMessage(CloudioLogMessage cloudioLogMessage) {
 
-            byte[] data = messageFormat.serializeCloudioLog(cloudioLogMessage);
+            byte[] data = messageFormat.serializeCloudioLogMessage(cloudioLogMessage);
 
             // Try to send the message if the MQTT client is connected.
             boolean messageSend = false;
