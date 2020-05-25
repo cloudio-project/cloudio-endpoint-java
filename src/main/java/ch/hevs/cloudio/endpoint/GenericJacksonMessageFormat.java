@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Calendar;
+import java.util.List;
 
 /**
  * Encodes messages using the Jackson serialization API. The actual format is determined by the passed factory instance. If a JsonFactory object is passed,
@@ -41,6 +42,12 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
             JsonGenerator generator = factory.createGenerator(outputStream, JsonEncoding.UTF8);
 
             generator.writeStartObject();
+
+            generator.writeStringField("version", endpoint.getVersion());
+            generator.writeArrayFieldStart("supportedFormats");
+            for (String format : endpoint.getSupportedFormats()) {
+                generator.writeString(format);
+            }
 
             generator.writeObjectFieldStart("nodes");
             for (CloudioNode.InternalNode node : endpoint.getNodes()) {
