@@ -48,6 +48,7 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
             for (String format : endpoint.getSupportedFormats()) {
                 generator.writeString(format);
             }
+            generator.writeEndArray();
 
             generator.writeObjectFieldStart("nodes");
             for (CloudioNode.InternalNode node : endpoint.getNodes()) {
