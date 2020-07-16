@@ -74,7 +74,7 @@ public class JobsManager {
                         while ((line = reader.readLine()) != null) {
                             data = messageFormat.serializeJobsLineOutput(
                                     new JobsLineOutput(line, correlationID));
-                            mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                            mqtt.publish("@execOutput/" + uuid + "/" + correlationID, data, 1, false);
                         }
 
                         int exitCode = process.waitFor();
@@ -91,7 +91,7 @@ public class JobsManager {
                     try {
                         data = messageFormat.serializeJobsLineOutput(
                                 new JobsLineOutput("file uri:" + jobURI + " contain invalid file", correlationID));
-                        mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                        mqtt.publish("@execOutput/" + uuid + "/" + correlationID, data, 1, false);
                     } catch (MqttException exception) {
                         log.error("Exception: " + exception.getMessage());
                         exception.printStackTrace();
@@ -107,22 +107,22 @@ public class JobsManager {
                             try {
                                 data = messageFormat.serializeJobsLineOutput(
                                         new JobsLineOutput("List of jobs available as jobURI \"cmd://commandName\":", correlationID));
-                                mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                                mqtt.publish("@execOutput/" + uuid + "/" + correlationID, data, 1, false);
                                 for(CmdJobs cmd : CmdJobs.values())
                                 {
                                     data = messageFormat.serializeJobsLineOutput(
                                             new JobsLineOutput("\t"+cmd.name(), correlationID));
-                                    mqtt.publish("@execOutput/" + uuid,data , 1, false);
+                                    mqtt.publish("@execOutput/" + uuid + "/" + correlationID,data , 1, false);
                                 }
 
                                 data = messageFormat.serializeJobsLineOutput(
                                         new JobsLineOutput("List of jobs available as jobURI \"file://fileName\":", correlationID));
-                                mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                                mqtt.publish("@execOutput/" + uuid + "/" + correlationID, data, 1, false);
                                 for(String file : files)
                                 {
                                     data = messageFormat.serializeJobsLineOutput(
                                             new JobsLineOutput("\t"+file, correlationID));
-                                    mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                                    mqtt.publish("@execOutput/" + uuid + "/" + correlationID, data, 1, false);
 
                                 }
                             } catch (MqttException exception) {
@@ -135,23 +135,23 @@ public class JobsManager {
 
                                 data = messageFormat.serializeJobsLineOutput(
                                         new JobsLineOutput("Fetching file in  " + jobsData, correlationID));
-                                mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                                mqtt.publish("@execOutput/" + uuid + "/" + correlationID, data, 1, false);
                                 InputStream in = new URL(jobsData).openStream();
                                 Files.copy(in, Paths.get("tmp.zip"), StandardCopyOption.REPLACE_EXISTING);
                                 data = messageFormat.serializeJobsLineOutput(
                                         new JobsLineOutput("UnZipping file in directory " + filePath, correlationID));
-                                mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                                mqtt.publish("@execOutput/" + uuid + "/" + correlationID, data, 1, false);
                                 unzipFileIntoDirectory("tmp.zip", filePath, mqtt, messageFormat, uuid, correlationID);
                                 data = messageFormat.serializeJobsLineOutput(
                                         new JobsLineOutput("File successfully unzipped in " + filePath, correlationID));
-                                mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                                mqtt.publish("@execOutput/" + uuid + "/" + correlationID, data, 1, false);
                             }catch (FileNotFoundException exception){
                                 log.error("Exception: " + exception.getMessage());
                                 exception.printStackTrace();
                                 try{
                                     data = messageFormat.serializeJobsLineOutput(
                                             new JobsLineOutput("Couldn't download file at specified URL: " + jobsData, correlationID));
-                                    mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                                    mqtt.publish("@execOutput/" + uuid + "/" + correlationID, data, 1, false);
                                 }catch (Exception e){
                                     log.error("Exception: " + e.getMessage());
                                     e.printStackTrace();}
@@ -171,7 +171,7 @@ public class JobsManager {
                     try {
                         data = messageFormat.serializeJobsLineOutput(
                                 new JobsLineOutput("cmd uri:" + jobURI + " not supported", correlationID));
-                        mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                        mqtt.publish("@execOutput/" + uuid + "/" + correlationID, data, 1, false);
                     } catch (MqttException exception) {
                         log.error("Exception: " + exception.getMessage());
                         exception.printStackTrace();
@@ -183,7 +183,7 @@ public class JobsManager {
                 try {
                     data = messageFormat.serializeJobsLineOutput(
                             new JobsLineOutput("uri:" + jobURI + " not supported", correlationID));
-                    mqtt.publish("@execOutput/" + uuid, data, 1, false);
+                    mqtt.publish("@execOutput/" + uuid + "/" + correlationID, data, 1, false);
                 } catch (MqttException exception) {
                     log.error("Exception: " + exception.getMessage());
                     exception.printStackTrace();
@@ -207,7 +207,7 @@ public class JobsManager {
         while ((entry = zis.getNextEntry()) != null) {
             dataMqtt = messageFormat.serializeJobsLineOutput(
                     new JobsLineOutput("unZipped "+destinationDir+ File.separator +entry.getName(), correlationID));
-            mqtt.publish("@execOutput/" + uuid, dataMqtt, 1, false);
+            mqtt.publish("@execOutput/" + uuid + "/" + correlationID, dataMqtt, 1, false);
             destFile = new File (destinationDir+ File.separator +entry.getName());
             if (entry.isDirectory()) {
                 destFile.mkdirs();
