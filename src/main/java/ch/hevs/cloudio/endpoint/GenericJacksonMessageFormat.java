@@ -44,6 +44,7 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
             generator.writeStartObject();
 
             generator.writeStringField("version", endpoint.getVersion());
+            generator.writeNumberField("messageFormatVersion", 2);
             generator.writeArrayFieldStart("supportedFormats");
             for (String format : endpoint.getSupportedFormats()) {
                 generator.writeString(format);
