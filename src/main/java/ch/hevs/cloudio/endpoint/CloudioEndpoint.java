@@ -13,10 +13,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.InputStream;
 import java.security.KeyStore;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Properties;
-import java.util.Stack;
+import java.util.*;
 
 /**
  * An Endpoint is the root object of any connection of a device or a gateway to cloud.io. The parameters of the
@@ -162,15 +159,24 @@ import java.util.Stack;
  *     </li>
  *     <li>
  *         <b>ch.hevs.cloudio.endpoint.messageFormat</b><br>
- *         The message format used to communicate within cloud.io. Currently supported data formats are:
+ *         Preferred message format used to communicate with cloud.io. Currently supported data formats are:
  *         <ul>
- *             <li>json: JSON Format.</li>
- *             <li>json+zip: Compressed JSON.</li>
+ *             <li>JSON: JSON Format.</li>
+ *             <li>CBOR: CBOR Format.</li>
  *         </ul>
- *         If this property is not set, the default "json" will be used.
- *         Note that it is important that all endpoints and applications in the same cloud.io installation use the very
- *         same message format, otherwise they will not be able to communicate with each other.
+ *         Messages <b>to</b> the cloud will be encoded using this message format and it will be the fist in the list of supported formats send to the cloud.
+ *         If this property is not set, the default "CBOR" will be used.
  *     </li>
+ *     <li>
+ *  *         <b>ch.hevs.cloudio.endpoint.supportedMessageFormats</b><br>
+ *  *         Allows to override the list of supported message formats. Comma separated list.
+ *  *         <ul>
+ *  *             <li>JSON: JSON Format.</li>
+ *  *             <li>CBOR: CBOR Format.</li>
+ *  *         </ul>
+ *  *         If this property is not set, all implemented message formats are used. Note that the formats in this list have to be present, otherwise an
+ *            exception will be thrown.
+ *  *     </li>
  *     <li>
  *         <b>ch.hevs.cloudio.endpoint.cleanSession</b><br>
  *         This property can be either "true" or "false". If it is true, a clean MQTT session is established with the
@@ -445,7 +451,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String SSL_PROTOCOL_PROPERTY           = "ch.hevs.cloudio.endpoint.ssl.protocol";
         private static final String SSL_PROTOCOL_DEFAULT            = "TLSv1.2";
         private static final String MESSAGE_FORMAT                  = "ch.hevs.cloudio.endpoint.messageFormat";
-        private static final String MESSAGE_FORMAT_DEFAULT          = "json";
+        private static final String MESSAGE_FORMAT_DEFAULT          = "CBOR";
+        private static final String SUPPORTED_MESSAGE_FORMATS       = "ch.hevs.cloudio.endpoint.supportedMessageFormats";
         private static final String MQTT_CLEAN_SESSION_PROPERTY     = "ch.hevs.cloudio.endpoint.cleanSession";
         private static final String MQTT_CLEAN_SESSION_DEFAULT      = "false";
         private static final String ENDPOINT_JOBS_SCRIPT_FOLDER     = "ch.hevs.cloudio.endpoint.jobs.folder";
@@ -470,7 +477,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
         private final String version = "v0.2";
-        private final String[] supportedFormats = {"CBOR", "JSON"};
+        private final String[] supportedFormats;
         private final NamedItemSet<CloudioNode.InternalNode> nodes = new NamedItemSet<CloudioNode.InternalNode>();
         private final MqttConnectOptions options;
         private int retryInterval;
@@ -539,6 +546,57 @@ public class CloudioEndpoint implements CloudioEndpointService {
             if (messageFormat == null) {
                 throw new InvalidPropertyException("Unknown message format (ch.hevs.cloudio.endpoint.messageFormat): " +
                         "\"" + messageFormatId + "\"");
+            }
+
+            // Create list of supported message formats.
+            if (configuration.containsKey(SUPPORTED_MESSAGE_FORMATS)) {
+                // Parse format list.
+                String[] customSupportedFormats = configuration.getProperty(SUPPORTED_MESSAGE_FORMATS).split(",");
+                for (int i = 0; i < customSupportedFormats.length; ++i) {
+                    customSupportedFormats[i] = customSupportedFormats[i].trim();
+                }
+
+                // Check that default format is in list of supported formats.
+                if (!Arrays.asList(customSupportedFormats).contains(messageFormatId)) {
+                    throw new InvalidPropertyException("Default format (ch.hevs.cloudio.endpoint.messageFormat) is not in list of supported formats " +
+                        " (ch.hevs.cloudio.endpoint.supportedMessageFormats): " +
+                        "\"" + messageFormatId + "\"");
+                }
+
+                // Add primary format as first to the list.
+                List<String> supportedFormats = new ArrayList<>();
+                supportedFormats.add(messageFormatId);
+
+                // Add all other supported formats.
+                for (String format: customSupportedFormats) {
+                    if (CloudioMessageFormatFactory.messageFormat(format) == null) {
+                        throw new InvalidPropertyException("Unknown message format (ch.hevs.cloudio.endpoint.supportedMessageFormats): " +
+                            "\"" + format + "\"");
+                    }
+                    if (!supportedFormats.contains(format)) {
+                        supportedFormats.add(format);
+                    }
+                }
+
+                this.supportedFormats = new String[supportedFormats.size()];
+                for (int i = 0; i < supportedFormats.size(); i++)
+                    this.supportedFormats[i] = supportedFormats.get(i);
+            } else {
+                // Add primary format as first to the list.
+                List<String> supportedFormats = new ArrayList<>();
+                supportedFormats.add(messageFormatId);
+
+                // Add all other supported formats.
+                String[] availableFormats = {"JSON", "CBOR"};
+                for (String format: availableFormats) {
+                    if (!supportedFormats.contains(format)) {
+                        supportedFormats.add(format);
+                    }
+                }
+
+                this.supportedFormats = new String[supportedFormats.size()];
+                for (int i = 0; i < supportedFormats.size(); i++)
+                    this.supportedFormats[i] = supportedFormats.get(i);
             }
 
             // Create a SSL based MQTT option object.
