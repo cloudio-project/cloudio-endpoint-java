@@ -168,15 +168,15 @@ import java.util.*;
  *         If this property is not set, the default "CBOR" will be used.
  *     </li>
  *     <li>
- *  *         <b>ch.hevs.cloudio.endpoint.supportedMessageFormats</b><br>
- *  *         Allows to override the list of supported message formats. Comma separated list.
- *  *         <ul>
- *  *             <li>JSON: JSON Format.</li>
- *  *             <li>CBOR: CBOR Format.</li>
- *  *         </ul>
- *  *         If this property is not set, all implemented message formats are used. Note that the formats in this list have to be present, otherwise an
- *            exception will be thrown.
- *  *     </li>
+ *         <b>ch.hevs.cloudio.endpoint.supportedMessageFormats</b><br>
+ *         Allows to override the list of supported message formats. Comma separated list.
+ *         <ul>
+ *             <li>JSON: JSON Format.</li>
+ *             <li>CBOR: CBOR Format.</li>
+ *         </ul>
+ *         If this property is not set, all implemented message formats are used. Note that the formats in this list have to be present, otherwise an
+ *         exception will be thrown.
+ *     </li>
  *     <li>
  *         <b>ch.hevs.cloudio.endpoint.cleanSession</b><br>
  *         This property can be either "true" or "false". If it is true, a clean MQTT session is established with the
