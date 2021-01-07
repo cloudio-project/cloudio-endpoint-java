@@ -241,9 +241,8 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
 
         this.deserializeAttribute(data, attribute);
 
-        JsonParser parser = new JsonFactory().createParser(data);
+        JsonParser parser = factory.createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
-
             while (parser.nextToken() != JsonToken.END_OBJECT) {
                 String fieldName = parser.getCurrentName();
                 if ("correlationID".equals(fieldName)) {
