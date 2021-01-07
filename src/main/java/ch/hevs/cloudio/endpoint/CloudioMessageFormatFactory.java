@@ -17,12 +17,12 @@ class CloudioMessageFormatFactory {
     }
 
     static CloudioMessageFormat messageFormat(String messageFormatName) {
-        switch (messageFormatName.toLowerCase()) {
-            case "json":
+        switch (messageFormatName) {
+            case "JSON":
                 if (json == null) json = new GenericJacksonMessageFormat.JSON();
                 return json;
 
-            case "cbor":
+            case "CBOR":
                 if (cbor == null) cbor = new GenericJacksonMessageFormat.CBOR();
                 return cbor;
 
