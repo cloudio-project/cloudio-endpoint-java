@@ -602,7 +602,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             // Create a SSL based MQTT option object.
             options = new MqttConnectOptions();
             try {
-                options.setSocketFactory(createSocketFactory(uuidOrAppName, configuration));
+                options.setSocketFactory(createSocketFactory(uuid, configuration));
             } catch (Exception exception) {
                 throw new CloudioEndpointInitializationException(exception);
             }
