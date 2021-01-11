@@ -708,7 +708,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 if (host == null) {
                     throw new InvalidPropertyException("Missing mandatory property \"" + MQTT_HOST_URI_PROPERTY + "\"");
                 }
-                mqtt = new MqttAsyncClient(configuration.getProperty(MQTT_HOST_URI_PROPERTY), uuidOrAppName, null);
+                mqtt = new MqttAsyncClient(configuration.getProperty(MQTT_HOST_URI_PROPERTY), uuid, null);
             } catch (MqttException exception) {
                 throw new CloudioEndpointInitializationException(exception);
             }
