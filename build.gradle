@@ -34,39 +34,20 @@ task javadocJar(type: Jar, dependsOn:javadoc) {
 }
 
 publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/cloudio-project/cloudio-endpoint-java")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("GPR_USER")
+                password = project.findProperty("gpr.key") ?: System.getenv("GPR_API_KEY")
+            }
+        }
+    }
+
     publications {
         mavenJava(MavenPublication) {
             from components.java
         }
-
-        mavenSources(MavenPublication) {
-            from components.java
-            artifact sourcesJar
-        }
-
-        mavenJavadoc(MavenPublication) {
-            from components.java
-            artifact javadocJar
-        }
     }
-}
-
-bintray {
-    user = "$System.env.BINTRAY_USER"
-    key = "$System.env.BINTRAY_KEY"
-    configurations = ['archives']
-    pkg {
-        repo = 'clients'
-        name = project.group + ':' + project.name
-        userOrg = 'cloudio-project'
-        desc= 'cloud.iO Java endpoint library/client'
-        websiteUrl = 'http://cloudio.hevs.ch'
-        issueTrackerUrl = 'https://github.com/cloudio-project/cloudio/issues'
-        vcsUrl = 'https://github.com/cloudio-project/cloudio'
-        licenses = ['MIT']
-        version {
-            name = project.version
-        }
-    }
-    publications = ['mavenJava', 'mavenSources', 'mavenJavadoc']
 }
