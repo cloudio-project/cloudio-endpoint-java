@@ -1,4 +1,4 @@
-name: Publish to GitHub Registry on Tag
+name: Publish master branch to GitHub registry on tag
 
 on:
   push:

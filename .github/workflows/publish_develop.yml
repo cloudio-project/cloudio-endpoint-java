@@ -1,4 +1,4 @@
-name: Publish to GitHub Registry on Push
+name: Publish develop branch to GitHub registry on push
 
 on: 
     push:
