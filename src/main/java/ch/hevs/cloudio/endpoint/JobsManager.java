@@ -58,7 +58,7 @@ public class JobsManager {
             case "file":
 
                 if (!listScripts(filePath).isEmpty() && listScripts(filePath).contains(job)){
-                    processBuilder.command("$SHELL", filePath + "/" + job);
+                    processBuilder.command(filePath + "/" + job);
 
                     try {
 
