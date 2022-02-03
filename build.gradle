@@ -13,8 +13,7 @@ group = 'ch.hevs.cloudio'
 version = '0.2.0-SNAPSHOT'
 
 repositories {
-    mavenLocal()
-    jcenter()
+    mavenCentral()
 }
 
 dependencies {
