@@ -14,6 +14,7 @@ import javax.net.ssl.TrustManagerFactory;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * An Endpoint is the root object of any connection of a device or a gateway to cloud.io. The parameters of the
@@ -466,14 +467,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String PERSISTENCE_MQTT_LOG            = "cloudioPersistenceLog";
         private static final String PERSISTENCE_MQTT_LIFECYCLE      = "cloudioPersistenceLifecycle";
 
-        /**
-         * Characters prohibited in the UUID.
-         *
-         * This list of characters will prevent using separator or wildcard characters for most uses
-         * (messaging, databases, filesystems, ...).
-         */
-        private static final String UUID_INVALID_CHARS              = "./#*+\\\r\n?\"\0',:;<>";
-
         /*** Attributes ***********************************************************************************************/
         private final String uuid;
         private final String version = "v0.2";
@@ -526,11 +519,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
             // Set the UUID.
             uuid = configuration.getProperty(UUID_PROPERTY, uuidOrAppName);
 
-            // Verify the UUID will be valid
-            for (char c : UUID_INVALID_CHARS.toCharArray()) {
-                if (uuid.contains(""+c)) {
-                    throw new InvalidUuidException(String.format("uuid(value:'%s') contains the invalid char 'UTF+%04X'",  uuid, (int)c));
-                }
+            // Verify the UUID is valid
+            if (!Pattern.matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", uuid)) {
+                throw new InvalidUuidException(String.format("uuid(value:'%s') is not a valid UUID", uuid));
             }
 
             persistenceFile = uuid+"-persistence.db";
@@ -602,7 +593,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             // Create a SSL based MQTT option object.
             options = new MqttConnectOptions();
             try {
-                options.setSocketFactory(createSocketFactory(uuidOrAppName, configuration));
+                options.setSocketFactory(createSocketFactory(uuid, configuration));
             } catch (Exception exception) {
                 throw new CloudioEndpointInitializationException(exception);
             }
