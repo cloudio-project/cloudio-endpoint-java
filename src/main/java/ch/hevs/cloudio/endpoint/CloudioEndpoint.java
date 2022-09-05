@@ -11,9 +11,19 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
-import java.io.InputStream;
+import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * An Endpoint is the root object of any connection of a device or a gateway to cloud.io. The parameters of the
@@ -465,6 +475,12 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String PERSISTENCE_MQTT_UPDATE         = "cloudioPersistenceUpdate";
         private static final String PERSISTENCE_MQTT_LOG            = "cloudioPersistenceLog";
         private static final String PERSISTENCE_MQTT_LIFECYCLE      = "cloudioPersistenceLifecycle";
+        /*** TOKEN parameters******************************************************************************************/
+        private static final String AUTH_TOKEN = "ch.hevs.cloudio.endpoint.token";
+        private static final String AUTH_TOKEN_PROPERTIES_PATH = "ch.hevs.cloudio.endpoint.tokenPropertiesPath";
+        private static final String TOKEN_PROPERTIES_DEFAULT_PATH = "/etc/cloud.io/";
+        private static final String TOKEN_PROPERTIES_FILENAME = "token.properties";
+        private static final String API_URL = "ch.hevs.cloudio.endpoint.apiUrl";
 
         /**
          * Characters prohibited in the UUID.
@@ -503,9 +519,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 throw new InvalidUuidException("uuidOrAppName can not be null!");
             }
 
+            Properties properties = new Properties();
             // Do we need to load the properties from a file?
             if (configuration == null) {
-                Properties properties = new Properties();
                 try {
                     InputStream propertiesInputStream = ResourceLoader.getResourceFromLocations(uuidOrAppName + ".properties",
                             this,
@@ -520,6 +536,141 @@ public class CloudioEndpoint implements CloudioEndpointService {
                             "[\"home:/.config/cloud.io/" + uuidOrAppName + ".properties\", " +
                             "\"file:/etc/cloud.io/" + uuidOrAppName + ".properties\", " +
                             "\"classpath:" + uuidOrAppName + ".properties\"].");
+                }
+            }
+
+            // Is the authentication done with a Token?
+            if (configuration.containsKey(AUTH_TOKEN)) {
+                String token = configuration.getProperty(AUTH_TOKEN, "");
+                String tokenPropertiesPath = configuration.getProperty(AUTH_TOKEN_PROPERTIES_PATH, TOKEN_PROPERTIES_DEFAULT_PATH);
+
+                File tokenPropertiesFile = new File(tokenPropertiesPath.replace("/", File.separator) + File.separator + TOKEN_PROPERTIES_FILENAME);
+
+                if (tokenPropertiesFile.exists() && !tokenPropertiesFile.isDirectory()) {
+                    //nothing to do here, file exist an is populated
+                } else {
+                    //create subfolder for token files
+                    File tokenPropertiesFolder = new File(tokenPropertiesPath);
+                    tokenPropertiesFolder.mkdirs();
+
+                    try {
+
+                        String mainURL = configuration.getProperty(API_URL, null);
+
+                        if (mainURL == null) {
+                            throw new InvalidPropertyException("CloudioEndpoint properties missing: No " + API_URL +
+                                    " properties given as argument");
+                        }
+
+                        HttpRequest request = HttpRequest.newBuilder()
+                                .uri(new URI(mainURL + "/api/v1/provision/"
+                                        + token
+                                        + "?endpointProvisionDataFormat=JAR_ARCHIVE"))
+                                .GET()
+                                .timeout(Duration.of(10, ChronoUnit.SECONDS))
+                                .build();
+                        HttpResponse<String> response = HttpClient.newBuilder()
+                                .build()
+                                .send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
+
+
+                        if (response.statusCode() == 200) {
+                            String uuidFromToken = response.headers().map().get("Endpoint").get(0);
+                            OutputStream osJar = new FileOutputStream(tokenPropertiesPath.replace("/", File.separator) + File.separator + uuidFromToken + ".jar");
+                            PrintWriter outJar = new PrintWriter(new OutputStreamWriter(osJar, StandardCharsets.ISO_8859_1));
+
+                            outJar.print(response.body());
+                            outJar.close();
+
+                            JarFile jar = new JarFile(tokenPropertiesPath.replace("/", File.separator) + File.separator + uuidFromToken + ".jar");
+                            Enumeration enumEntries = jar.entries();
+
+                            String propertiesPath = null;
+                            String keystorePath = null;
+                            String p12Path = null;
+
+                            while (enumEntries.hasMoreElements()) {
+                                JarEntry file = (JarEntry) enumEntries.nextElement();
+
+                                File uncompressedFile;
+                                //if file is the *.properties file, change its path to the configured path
+                                if (file.getName().contains(".properties")) {
+                                    uncompressedFile = new java.io.File(tokenPropertiesPath + File.separator + TOKEN_PROPERTIES_FILENAME);
+                                } else {
+                                    uncompressedFile = new java.io.File(tokenPropertiesPath.replace("/", File.separator) + File.separator + file.getName());
+                                }
+
+                                String fAbsolutePath = uncompressedFile.getAbsolutePath();
+
+                                // if it is a directory, create it
+                                if (file.isDirectory()) {
+                                    uncompressedFile.mkdir();
+                                    continue;
+                                }
+                                else { // if it is a file, create the subfolders
+                                    File fFolder = new File(uncompressedFile.getParent());
+                                    fFolder.mkdirs();
+                                }
+                                if (fAbsolutePath.contains(".properties")) {
+                                    propertiesPath = fAbsolutePath;
+                                } else if (fAbsolutePath.contains(".p12")) {
+                                    p12Path = fAbsolutePath;
+                                } else if (fAbsolutePath.contains(".jks")) {
+                                    keystorePath = fAbsolutePath;
+                                }
+                                java.io.InputStream is = jar.getInputStream(file); // get the input stream
+                                java.io.FileOutputStream fos = new java.io.FileOutputStream(uncompressedFile);
+
+                                while (is.available() > 0) {  // write contents of 'is' to 'fos'
+                                    fos.write(is.read());
+                                }
+
+                                fos.close();
+                                is.close();
+                            }
+                            jar.close();
+
+                            // if we got a *.properties files, do the process of populating it with uuid and keystores
+                            if (propertiesPath != null) {
+                                OutputStream osProperties = new FileOutputStream(propertiesPath, true);
+                                PrintWriter outProperties = new PrintWriter(new OutputStreamWriter(osProperties, StandardCharsets.UTF_8));
+
+                                outProperties.print("ch.hevs.cloudio.endpoint.uuid=");
+                                outProperties.println(uuidFromToken);
+
+                                if (keystorePath != null) {
+                                    outProperties.print("ch.hevs.cloudio.endpoint.ssl.authorityCert=file:/");
+                                    outProperties.println(keystorePath.replace("\\", "/"));
+                                }
+
+                                if (p12Path != null) {
+                                    outProperties.print("ch.hevs.cloudio.endpoint.ssl.clientCert=file:/");
+                                    outProperties.println(p12Path.replace("\\", "/"));
+                                }
+                                outProperties.close();
+                            }
+
+                        } else {
+                            //TODO tester 200, 403, 500
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                }
+
+                //Populate the properties
+                try {
+                    InputStream tokenPropertiesInputStream = ResourceLoader.getResource("file:/" + tokenPropertiesPath + "/"+ TOKEN_PROPERTIES_FILENAME, this);
+                    // use previous loaded properties and append the properties from token.properties files
+                    properties.load(tokenPropertiesInputStream);
+                    configuration = new PropertiesEndpointConfiguration(properties);
+
+                //TODO better catch and rethrow of the exceptions
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
             }
 
