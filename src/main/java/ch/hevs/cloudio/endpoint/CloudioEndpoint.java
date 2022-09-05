@@ -13,7 +13,6 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.*;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -199,6 +198,31 @@ import java.util.jar.JarFile;
  *         This property can be either "true" or "false". If it is "true", the hostname of the broker will be verified
  *         the very same way as it is done by HTTPS. If "false" the host name is not verified at all. Per default the
  *         hostname is verified (true).
+ *     </li>
+ *
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.token</b><br>
+ *
+ *         This property contains a single-use authentication token for the endpoint. This token is used to retrieve
+ *         certificates using the cloud.iO Rest API.
+ *
+ *     </li>
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.tokenPropertiesPath</b><br>
+ *
+ *         This property is used to specify a path where the retrieved certificates and .properties file from token
+ *         authentication will be stored. <br>
+ *
+ *         This property is optional and taken into account only if token authentication is used.
+ *         Its the default is <b>/etc/cloud.io/</b>.
+ *     </li>
+ *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.apiUrl</b><br>
+ *
+ *          Main URL of the cloud.iO Rest API. This URL is used for the certificate retrieval using authentication
+ *          token.<br>
+ *
+ *         This property is mandatory when using authentication token.
  *     </li>
  * </ul>
  */
@@ -576,6 +600,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                         if (response.statusCode() == 200) {
                             String uuidFromToken = response.headers().map().get("Endpoint").get(0);
+
                             OutputStream osJar = new FileOutputStream(tokenPropertiesPath.replace("/", File.separator) + File.separator + uuidFromToken + ".jar");
                             PrintWriter outJar = new PrintWriter(new OutputStreamWriter(osJar, StandardCharsets.ISO_8859_1));
 
@@ -588,7 +613,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
                             String propertiesPath = null;
                             String keystorePath = null;
                             String p12Path = null;
-
                             while (enumEntries.hasMoreElements()) {
                                 JarEntry file = (JarEntry) enumEntries.nextElement();
 
@@ -651,12 +675,12 @@ public class CloudioEndpoint implements CloudioEndpointService {
                             }
 
                         } else {
-                            //TODO tester 200, 403, 500
+                            throw new CloudioEndpointInitializationException("Certificate retrieval from Token on " +
+                                    mainURL + " failed with http status code " + response.statusCode());
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        throw new CloudioEndpointInitializationException(e);
                     }
-
                 }
 
                 //Populate the properties
@@ -666,11 +690,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     properties.load(tokenPropertiesInputStream);
                     configuration = new PropertiesEndpointConfiguration(properties);
 
-                //TODO better catch and rethrow of the exceptions
-                } catch (URISyntaxException e) {
-                    throw new RuntimeException(e);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                } catch (Exception e) {
+                    throw new CloudioEndpointInitializationException(e);
                 }
             }
 
