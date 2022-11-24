@@ -13,8 +13,6 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.util.*;
 
@@ -230,14 +228,13 @@ public class CloudioEndpoint implements CloudioEndpointService {
     }
 
     //TODO WIP Here
-    public void addNodesFromJson(String jsonPath) throws InvalidPropertyException
-    {
-        try{
-        InputStream jsonNodesInputStream = ResourceLoader.getResourceFromLocations(jsonPath,
-                this,
-                "home:" + "/.config/cloud.io/",
-                "file:/etc/cloud.io/",
-                "classpath:cloud.io/");
+    public void addNodesFromJson(String jsonPath) throws CloudioFactoryException {
+        try {
+            InputStream jsonNodesInputStream = ResourceLoader.getResourceFromLocations(jsonPath,
+                    this,
+                    "home:" + "/.config/cloud.io/",
+                    "file:/etc/cloud.io/",
+                    "classpath:cloud.io/");
             byte[] bytes = jsonNodesInputStream.readAllBytes();
             CloudioFactoryNodes cloudioFactoryNodes = internal.messageFormat.deserializeNodes(bytes);
             for (String nodeKey : cloudioFactoryNodes.nodes.keySet()) {
@@ -245,16 +242,13 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                 CloudioDynamicNode cloudioDynamicNode;
 
-                if(cloudioFactoryNode.type.equals("CloudioNode"))
-                {
+                if (cloudioFactoryNode.type.equals("CloudioNode")) {
                     cloudioDynamicNode = new CloudioDynamicNode();
                     this.parseCloudioFactoryNode(cloudioFactoryNode, cloudioDynamicNode);
                     System.out.println(nodeKey);
 
                     this.addNode(nodeKey, cloudioDynamicNode);
-                }
-                else
-                {
+                } else {
                     Class<?> nodeClass = Class.forName(cloudioFactoryNode.type);
                     Constructor<?> constructor = nodeClass.getConstructor();
                     Object nodeClassInstance = constructor.newInstance();
@@ -263,17 +257,10 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                     this.addNode(nodeKey, (CloudioNode) nodeClassInstance);
                 }
-
-
-
-
             }
-
-
         } catch (Exception exception) {
             System.out.println(exception.getMessage());
-            throw new InvalidPropertyException("CloudioEndpoint properties missing: No properties given as " +
-                    "argument to constructor and no json file found " +
+            throw new CloudioFactoryException("Json file "+jsonPath+" given to add Nodes From Json was not found " +
                     "[\"home:/.config/cloud.io/" + jsonPath + "\", " +
                     "\"file:/etc/cloud.io/" + jsonPath + "\", " +
                     "\"classpath:" + jsonPath + "\"].");
@@ -293,31 +280,28 @@ public class CloudioEndpoint implements CloudioEndpointService {
             } catch (DuplicateItemException e) {
                 throw new RuntimeException(e);
             }
-
         }
-
     }
+
     private void parseCloudioFactoryObject(CloudioFactoryObject cloudioFactoryObject, CloudioDynamicObject cloudioDynamicObject) throws CloudioAttributeInitializationException {
         for (String objectKey : cloudioFactoryObject.objects.keySet()) {
             CloudioFactoryObject innerCloudioFactoryObject = cloudioFactoryObject.objects.get(objectKey);
 
             CloudioDynamicObject innerCloudioDynamicObject = new CloudioDynamicObject();
-            this.parseCloudioFactoryObject(innerCloudioFactoryObject,innerCloudioDynamicObject);
+            this.parseCloudioFactoryObject(innerCloudioFactoryObject, innerCloudioDynamicObject);
 
             try {
-                cloudioDynamicObject.addObject(objectKey,innerCloudioDynamicObject);
+                cloudioDynamicObject.addObject(objectKey, innerCloudioDynamicObject);
             } catch (DuplicateItemException e) {
                 throw new RuntimeException(e);
             }
         }
         for (String attributeKey : cloudioFactoryObject.attributes.keySet()) {
             CloudioFactoryAttribute cloudioFactoryAttribute = cloudioFactoryObject.attributes.get(attributeKey);
-            this.parseCloudioFactoryAttribute(cloudioFactoryAttribute);
 
-            //TODO Change parameter from addAttribute
             try {
                 Class type;
-                switch(cloudioFactoryAttribute.type) {
+                switch (cloudioFactoryAttribute.type) {
                     case "Boolean":
                         type = Boolean.class;
                         break;
@@ -338,11 +322,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 throw new RuntimeException(e);
             }
         }
-
-    }
-    private void parseCloudioFactoryAttribute(CloudioFactoryAttribute cloudioFactoryAttribute)
-    {
-
     }
 
     /**
