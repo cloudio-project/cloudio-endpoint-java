@@ -280,8 +280,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
     }
 
-    private void parseCloudioFactoryNode(CloudioFactoryNode cloudioFactoryNode, CloudioDynamicNode cloudioDynamicNode)
-    {
+    private void parseCloudioFactoryNode(CloudioFactoryNode cloudioFactoryNode, CloudioDynamicNode cloudioDynamicNode) throws CloudioAttributeInitializationException {
 
         for (String objectKey : cloudioFactoryNode.objects.keySet()) {
             CloudioFactoryObject cloudioFactoryObject = cloudioFactoryNode.objects.get(objectKey);
@@ -298,31 +297,43 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
 
     }
-    private void parseCloudioFactoryObject(CloudioFactoryObject cloudioFactoryObject, CloudioDynamicObject cloudioDynamicObject)
-    {
+    private void parseCloudioFactoryObject(CloudioFactoryObject cloudioFactoryObject, CloudioDynamicObject cloudioDynamicObject) throws CloudioAttributeInitializationException {
         for (String objectKey : cloudioFactoryObject.objects.keySet()) {
             CloudioFactoryObject innerCloudioFactoryObject = cloudioFactoryObject.objects.get(objectKey);
 
-            CloudioDynamicObject innderCloudioDynamicObject = new CloudioDynamicObject();
-            this.parseCloudioFactoryObject(cloudioFactoryObject,innderCloudioDynamicObject);
+            CloudioDynamicObject innerCloudioDynamicObject = new CloudioDynamicObject();
+            this.parseCloudioFactoryObject(innerCloudioFactoryObject,innerCloudioDynamicObject);
 
             try {
-                cloudioDynamicObject.addObject(objectKey,innderCloudioDynamicObject);
+                cloudioDynamicObject.addObject(objectKey,innerCloudioDynamicObject);
             } catch (DuplicateItemException e) {
                 throw new RuntimeException(e);
             }
-
-            System.out.println(objectKey);
         }
         for (String attributeKey : cloudioFactoryObject.attributes.keySet()) {
             CloudioFactoryAttribute cloudioFactoryAttribute = cloudioFactoryObject.attributes.get(attributeKey);
             this.parseCloudioFactoryAttribute(cloudioFactoryAttribute);
 
-            System.out.println(attributeKey);
-
             //TODO Change parameter from addAttribute
             try {
-                cloudioDynamicObject.addAttribute(attributeKey, String.class, CloudioAttributeConstraint.SetPoint);
+                Class type;
+                switch(cloudioFactoryAttribute.type) {
+                    case "Boolean":
+                        type = Boolean.class;
+                        break;
+                    case "Integer":
+                        type = Integer.class;
+                        break;
+                    case "Number":
+                        type = Double.class;
+                        break;
+                    case "String":
+                        type = String.class;
+                        break;
+                    default:
+                        throw new CloudioAttributeInitializationException("Unknown attribute type found while building endpoint from factory");
+                }
+                cloudioDynamicObject.addAttribute(attributeKey, type, CloudioAttributeConstraint.valueOf(cloudioFactoryAttribute.constraint));
             } catch (DuplicateItemException e) {
                 throw new RuntimeException(e);
             }
