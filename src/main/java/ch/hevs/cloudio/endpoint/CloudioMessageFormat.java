@@ -116,4 +116,6 @@ interface CloudioMessageFormat {
      * @return               Raw data representation of the JobsLineOutput.
      */
     byte[] serializeJobsLineOutput(JobsLineOutput jobsLineOutput);
+
+    CloudioFactoryNodes deserializeNodes(byte[] data) throws Exception;
 }

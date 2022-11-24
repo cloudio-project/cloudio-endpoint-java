@@ -1,6 +1,9 @@
 package ch.hevs.cloudio.endpoint;
 
 import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.core.util.ByteArrayBuilder;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import org.apache.logging.log4j.LogManager;
@@ -9,7 +12,9 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Encodes messages using the Jackson serialization API. The actual format is determined by the passed factory instance. If a JsonFactory object is passed,
@@ -327,6 +332,14 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
             exception.printStackTrace();
         }
         return outputStream.toByteArray();
+    }
+
+    @Override
+    public CloudioFactoryNodes deserializeNodes(byte[] data) throws Exception
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        CloudioFactoryNodes cloudioFactoryNodes = mapper.readValue(data, CloudioFactoryNodes.class);
+        return cloudioFactoryNodes;
     }
 
     private void serializeNode(CloudioNode.InternalNode node, JsonGenerator generator) throws IOException {

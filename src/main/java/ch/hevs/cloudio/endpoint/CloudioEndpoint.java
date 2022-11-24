@@ -12,6 +12,9 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.util.*;
 
@@ -224,6 +227,111 @@ public class CloudioEndpoint implements CloudioEndpointService {
             CloudioEndpointInitializationException {
         // Call internal designated constructor with empty properties reference.
         internal = new InternalEndpoint(uuidOrAppName, null, null);
+    }
+
+    //TODO WIP Here
+    public void addNodesFromJson(String jsonPath) throws InvalidPropertyException
+    {
+        try{
+        InputStream jsonNodesInputStream = ResourceLoader.getResourceFromLocations(jsonPath,
+                this,
+                "home:" + "/.config/cloud.io/",
+                "file:/etc/cloud.io/",
+                "classpath:cloud.io/");
+            byte[] bytes = jsonNodesInputStream.readAllBytes();
+            CloudioFactoryNodes cloudioFactoryNodes = internal.messageFormat.deserializeNodes(bytes);
+            for (String nodeKey : cloudioFactoryNodes.nodes.keySet()) {
+                CloudioFactoryNode cloudioFactoryNode = cloudioFactoryNodes.nodes.get(nodeKey);
+
+                CloudioDynamicNode cloudioDynamicNode;
+
+                if(cloudioFactoryNode.type.equals("CloudioNode"))
+                {
+                    cloudioDynamicNode = new CloudioDynamicNode();
+                    this.parseCloudioFactoryNode(cloudioFactoryNode, cloudioDynamicNode);
+                    System.out.println(nodeKey);
+
+                    this.addNode(nodeKey, cloudioDynamicNode);
+                }
+                else
+                {
+                    Class<?> nodeClass = Class.forName(cloudioFactoryNode.type);
+                    Constructor<?> constructor = nodeClass.getConstructor();
+                    Object nodeClassInstance = constructor.newInstance();
+
+                    this.parseCloudioFactoryNode(cloudioFactoryNode, (CloudioDynamicNode) nodeClassInstance);
+
+                    this.addNode(nodeKey, (CloudioNode) nodeClassInstance);
+                }
+
+
+
+
+            }
+
+
+        } catch (Exception exception) {
+            System.out.println(exception.getMessage());
+            throw new InvalidPropertyException("CloudioEndpoint properties missing: No properties given as " +
+                    "argument to constructor and no json file found " +
+                    "[\"home:/.config/cloud.io/" + jsonPath + "\", " +
+                    "\"file:/etc/cloud.io/" + jsonPath + "\", " +
+                    "\"classpath:" + jsonPath + "\"].");
+        }
+    }
+
+    private void parseCloudioFactoryNode(CloudioFactoryNode cloudioFactoryNode, CloudioDynamicNode cloudioDynamicNode)
+    {
+
+        for (String objectKey : cloudioFactoryNode.objects.keySet()) {
+            CloudioFactoryObject cloudioFactoryObject = cloudioFactoryNode.objects.get(objectKey);
+            CloudioDynamicObject cloudioDynamicObject = new CloudioDynamicObject();
+
+            this.parseCloudioFactoryObject(cloudioFactoryObject, cloudioDynamicObject);
+
+            try {
+                cloudioDynamicNode.addObject(objectKey, cloudioDynamicObject);
+            } catch (DuplicateItemException e) {
+                throw new RuntimeException(e);
+            }
+
+        }
+
+    }
+    private void parseCloudioFactoryObject(CloudioFactoryObject cloudioFactoryObject, CloudioDynamicObject cloudioDynamicObject)
+    {
+        for (String objectKey : cloudioFactoryObject.objects.keySet()) {
+            CloudioFactoryObject innerCloudioFactoryObject = cloudioFactoryObject.objects.get(objectKey);
+
+            CloudioDynamicObject innderCloudioDynamicObject = new CloudioDynamicObject();
+            this.parseCloudioFactoryObject(cloudioFactoryObject,innderCloudioDynamicObject);
+
+            try {
+                cloudioDynamicObject.addObject(objectKey,innderCloudioDynamicObject);
+            } catch (DuplicateItemException e) {
+                throw new RuntimeException(e);
+            }
+
+            System.out.println(objectKey);
+        }
+        for (String attributeKey : cloudioFactoryObject.attributes.keySet()) {
+            CloudioFactoryAttribute cloudioFactoryAttribute = cloudioFactoryObject.attributes.get(attributeKey);
+            this.parseCloudioFactoryAttribute(cloudioFactoryAttribute);
+
+            System.out.println(attributeKey);
+
+            //TODO Change parameter from addAttribute
+            try {
+                cloudioDynamicObject.addAttribute(attributeKey, String.class, CloudioAttributeConstraint.SetPoint);
+            } catch (DuplicateItemException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+    }
+    private void parseCloudioFactoryAttribute(CloudioFactoryAttribute cloudioFactoryAttribute)
+    {
+
     }
 
     /**

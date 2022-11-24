@@ -19,7 +19,7 @@ public abstract class CloudioNode {
         private CloudioNodeContainer parent = null;
         private String name = null;
         private final Set<String> interfaces = new TreeSet<String>();
-        private final NamedItemSet<CloudioObject.InternalObject> objects = new NamedItemSet<CloudioObject.InternalObject>();
+        protected final NamedItemSet<CloudioObject.InternalObject> objects = new NamedItemSet<CloudioObject.InternalObject>();
 
         public InternalNode() {
             try {
