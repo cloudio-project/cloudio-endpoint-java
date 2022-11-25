@@ -230,14 +230,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
     }
 
     //TODO WIP Here
-    public void addNodesFromJson(String jsonPath) throws CloudioFactoryException {
+    public void addNodesFromStream(InputStream nodesInputStream, CloudioFactoryFormat factoryFormat) throws CloudioFactoryException {
         try {
-            InputStream jsonNodesInputStream = ResourceLoader.getResourceFromLocations(jsonPath,
-                    this,
-                    "home:" + "/.config/cloud.io/",
-                    "file:/etc/cloud.io/",
-                    "classpath:cloud.io/");
-            CloudioFactoryNodes cloudioFactoryNodes = internal.factoryFormat.deserializeNodes(jsonNodesInputStream);
+            CloudioFactoryNodes cloudioFactoryNodes = factoryFormat.deserializeNodes(nodesInputStream);
             for (String nodeKey : cloudioFactoryNodes.nodes.keySet()) {
                 CloudioFactoryNode cloudioFactoryNode = cloudioFactoryNodes.nodes.get(nodeKey);
 
@@ -246,7 +241,6 @@ public class CloudioEndpoint implements CloudioEndpointService {
                 if (cloudioFactoryNode.type.equals("CloudioNode")) {
                     cloudioDynamicNode = new CloudioDynamicNode();
                     this.parseCloudioFactoryNode(cloudioFactoryNode, cloudioDynamicNode);
-                    System.out.println(nodeKey);
 
                     this.addNode(nodeKey, cloudioDynamicNode);
                 } else {
@@ -259,12 +253,29 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     this.addNode(nodeKey, (CloudioNode) nodeClassInstance);
                 }
             }
+        } catch (Exception exception) {
+            throw new CloudioFactoryException(exception);
+        }
+    }
+
+    public void addNodesFromStream(InputStream nodesInputStream) throws CloudioFactoryException {
+        addNodesFromStream(nodesInputStream, this.internal.factoryFormat);
+    }
+
+    public void addNodesFromResource(String path) throws CloudioFactoryException {
+        try {
+            InputStream jsonNodesInputStream = ResourceLoader.getResourceFromLocations(path,
+                    this,
+                    "home:" + "/.config/cloud.io/",
+                    "file:/etc/cloud.io/",
+                    "classpath:cloud.io/");
+            addNodesFromStream(jsonNodesInputStream);
         }
         catch (FileNotFoundException exception) {
-            throw new CloudioFactoryException("Json file "+jsonPath+" given to add Nodes From Json was not found " +
-                    "[\"home:/.config/cloud.io/" + jsonPath + "\", " +
-                    "\"file:/etc/cloud.io/" + jsonPath + "\", " +
-                    "\"classpath:" + jsonPath + "\"].");
+            throw new CloudioFactoryException("Json file "+path+" given to add Nodes From Json was not found " +
+                    "[\"home:/.config/cloud.io/" + path + "\", " +
+                    "\"file:/etc/cloud.io/" + path + "\", " +
+                    "\"classpath:" + path + "\"].");
         } catch (Exception exception) {
             throw new CloudioFactoryException(exception);
         }
