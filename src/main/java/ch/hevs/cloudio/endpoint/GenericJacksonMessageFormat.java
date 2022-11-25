@@ -1,21 +1,14 @@
 package ch.hevs.cloudio.endpoint;
 
 import com.fasterxml.jackson.core.*;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.core.util.ByteArrayBuilder;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Encodes messages using the Jackson serialization API. The actual format is determined by the passed factory instance. If a JsonFactory object is passed,
@@ -140,14 +133,13 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
             generator.writeFieldName("messages");
             generator.writeStartArray();
 
-            for(String messageCategory: messageCategories) {
+            for (String messageCategory : messageCategories) {
                 CloudioPersistence.Message message;
 
-                for(int i = 0; i<cloudioPersistence.messageCount(messageCategory); i++)
-                {
+                for (int i = 0; i < cloudioPersistence.messageCount(messageCategory); i++) {
                     generator.writeStartObject();
 
-                    message = cloudioPersistence.getMessage(messageCategory,i);
+                    message = cloudioPersistence.getMessage(messageCategory, i);
 
                     // Get the pending update persistent object from store.
                     byte[] data = message.data;
@@ -160,7 +152,7 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
                     generator.writeStartObject();
                     generator.flush();
                     //add the data messages from saved bytes, remove the 1st and last char which are "{" and "}"
-                    outputStream.write(data,1,data.length-2);
+                    outputStream.write(data, 1, data.length - 2);
 
                     generator.writeEndObject();
                     generator.writeEndObject();
@@ -196,7 +188,7 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
 
     @Override
     public void deserializeAttribute(byte[] data, CloudioAttribute.InternalAttribute attribute)
-        throws CloudioAttributeConstraintException, NumberFormatException, IOException {
+            throws CloudioAttributeConstraintException, NumberFormatException, IOException {
 
         JsonParser parser = factory.createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
@@ -261,7 +253,7 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
 
     @Override
     public void deserializeJobsParameter(byte[] data, JobsParameter jobsParameter)
-        throws NumberFormatException, IOException {
+            throws NumberFormatException, IOException {
         JsonParser parser = factory.createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
             String jobURI;
@@ -292,7 +284,7 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
 
     @Override
     public void deserializeLogParameter(byte[] data, LogParameter logParameter)
-        throws NumberFormatException, IOException {
+            throws NumberFormatException, IOException {
         JsonParser parser = factory.createParser(data);
         if (parser.nextToken() == JsonToken.START_OBJECT) {
             String level;
@@ -333,14 +325,6 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
             exception.printStackTrace();
         }
         return outputStream.toByteArray();
-    }
-
-    @Override
-    public CloudioFactoryNodes deserializeNodes(InputStream jsonNodesInputStream) throws Exception
-    {
-        ObjectMapper mapper = new ObjectMapper();
-        CloudioFactoryNodes cloudioFactoryNodes = mapper.readValue(jsonNodesInputStream, CloudioFactoryNodes.class);
-        return cloudioFactoryNodes;
     }
 
     private void serializeNode(CloudioNode.InternalNode node, JsonGenerator generator) throws IOException {

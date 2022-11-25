@@ -1,7 +1,5 @@
 package ch.hevs.cloudio.endpoint;
 
-import java.io.InputStream;
-
 /**
  * The CloudioMessageFormat interface declares the methods that are used by the {@link CloudioEndpoint} implementation in order to
  * encode and decode local cloud.iO objects and attributes into MQTT messages and vice-versa.
@@ -118,6 +116,4 @@ interface CloudioMessageFormat {
      * @return               Raw data representation of the JobsLineOutput.
      */
     byte[] serializeJobsLineOutput(JobsLineOutput jobsLineOutput);
-
-    CloudioFactoryNodes deserializeNodes(InputStream jsonNodesInputStream) throws Exception;
 }

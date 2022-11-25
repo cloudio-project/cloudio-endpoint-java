@@ -235,8 +235,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     "home:" + "/.config/cloud.io/",
                     "file:/etc/cloud.io/",
                     "classpath:cloud.io/");
-            byte[] bytes = jsonNodesInputStream.readAllBytes();
-            CloudioFactoryNodes cloudioFactoryNodes = internal.messageFormat.deserializeNodes(jsonNodesInputStream);
+            CloudioFactoryNodes cloudioFactoryNodes = internal.factoryFormat.deserializeNodes(jsonNodesInputStream);
             for (String nodeKey : cloudioFactoryNodes.nodes.keySet()) {
                 CloudioFactoryNode cloudioFactoryNode = cloudioFactoryNodes.nodes.get(nodeKey);
 
@@ -550,6 +549,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String SSL_PROTOCOL_DEFAULT            = "TLSv1.2";
         private static final String MESSAGE_FORMAT                  = "ch.hevs.cloudio.endpoint.messageFormat";
         private static final String MESSAGE_FORMAT_DEFAULT          = "CBOR";
+        private static final String FACTORY_FORMAT                  = "ch.hevs.cloudio.endpoint.factoryFormat";
+        private static final String MESSAGE_FACTORY_DEFAULT          = "JSON";
         private static final String SUPPORTED_MESSAGE_FORMATS       = "ch.hevs.cloudio.endpoint.supportedMessageFormats";
         private static final String MQTT_CLEAN_SESSION_PROPERTY     = "ch.hevs.cloudio.endpoint.cleanSession";
         private static final String MQTT_CLEAN_SESSION_DEFAULT      = "false";
@@ -582,6 +583,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private final MqttAsyncClient mqtt;
         private final boolean persistence;
         private final CloudioMessageFormat messageFormat;
+        private final CloudioFactoryFormat factoryFormat;
         private final List<CloudioEndpointListener> listeners = new LinkedList<CloudioEndpointListener>();
         private String jobsFilePath;
         private boolean inTransaction = false;
@@ -643,6 +645,14 @@ public class CloudioEndpoint implements CloudioEndpointService {
             messageFormat = CloudioMessageFormatFactory.messageFormat(messageFormatId);
             if (messageFormat == null) {
                 throw new InvalidPropertyException("Unknown message format (ch.hevs.cloudio.endpoint.messageFormat): " +
+                        "\"" + messageFormatId + "\"");
+            }
+
+            // Create factory format instance.
+            String factoryFormatId = configuration.getProperty(FACTORY_FORMAT, MESSAGE_FACTORY_DEFAULT);
+            factoryFormat = CloudioFactoryFormatFactory.factoryFormat(messageFormatId);
+            if (factoryFormat == null) {
+                throw new InvalidPropertyException("Unknown factory format (ch.hevs.cloudio.endpoint.factoryFormat): " +
                         "\"" + messageFormatId + "\"");
             }
 
