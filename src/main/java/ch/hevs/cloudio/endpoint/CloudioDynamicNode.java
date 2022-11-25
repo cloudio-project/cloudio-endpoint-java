@@ -163,9 +163,9 @@ public class CloudioDynamicNode extends CloudioNode {
         public InternalDynamicNode()
         {
             super();
-
-            if(!this.objects.isEmpty()) {
-                Iterator<CloudioObject.InternalObject> objectIterator = this.objects.iterator();
+            NamedItemSet<CloudioObject.InternalObject> staticObjects = getStaticsObjects();
+            if(!staticObjects.isEmpty()) {
+                Iterator<CloudioObject.InternalObject> objectIterator = staticObjects.iterator();
                 while (objectIterator.hasNext()) {
                     try {
                         CloudioObject.InternalObject newObject = objectIterator.next();
@@ -173,7 +173,7 @@ public class CloudioDynamicNode extends CloudioNode {
                     } catch (DuplicateItemException e) {
                         throw new RuntimeException(e);
                     }
-            }
+                }
             }
         }
 

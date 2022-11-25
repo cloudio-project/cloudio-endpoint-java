@@ -236,7 +236,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     "file:/etc/cloud.io/",
                     "classpath:cloud.io/");
             byte[] bytes = jsonNodesInputStream.readAllBytes();
-            CloudioFactoryNodes cloudioFactoryNodes = internal.messageFormat.deserializeNodes(bytes);
+            CloudioFactoryNodes cloudioFactoryNodes = internal.messageFormat.deserializeNodes(jsonNodesInputStream);
             for (String nodeKey : cloudioFactoryNodes.nodes.keySet()) {
                 CloudioFactoryNode cloudioFactoryNode = cloudioFactoryNodes.nodes.get(nodeKey);
 

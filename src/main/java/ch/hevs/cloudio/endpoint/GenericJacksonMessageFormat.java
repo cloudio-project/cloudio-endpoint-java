@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -335,10 +336,10 @@ class GenericJacksonMessageFormat implements CloudioMessageFormat {
     }
 
     @Override
-    public CloudioFactoryNodes deserializeNodes(byte[] data) throws Exception
+    public CloudioFactoryNodes deserializeNodes(InputStream jsonNodesInputStream) throws Exception
     {
         ObjectMapper mapper = new ObjectMapper();
-        CloudioFactoryNodes cloudioFactoryNodes = mapper.readValue(data, CloudioFactoryNodes.class);
+        CloudioFactoryNodes cloudioFactoryNodes = mapper.readValue(jsonNodesInputStream, CloudioFactoryNodes.class);
         return cloudioFactoryNodes;
     }
 
