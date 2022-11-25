@@ -11,8 +11,10 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.security.KeyStore;
 import java.util.*;
 
@@ -257,16 +259,18 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     this.addNode(nodeKey, (CloudioNode) nodeClassInstance);
                 }
             }
-        } catch (Exception exception) {
-            System.out.println(exception.getMessage());
+        }
+        catch (FileNotFoundException exception) {
             throw new CloudioFactoryException("Json file "+jsonPath+" given to add Nodes From Json was not found " +
                     "[\"home:/.config/cloud.io/" + jsonPath + "\", " +
                     "\"file:/etc/cloud.io/" + jsonPath + "\", " +
                     "\"classpath:" + jsonPath + "\"].");
+        } catch (Exception exception) {
+            throw new CloudioFactoryException(exception);
         }
     }
 
-    private void parseCloudioFactoryNode(CloudioFactoryNode cloudioFactoryNode, CloudioDynamicNode cloudioDynamicNode) throws CloudioAttributeInitializationException {
+    private void parseCloudioFactoryNode(CloudioFactoryNode cloudioFactoryNode, CloudioDynamicNode cloudioDynamicNode) throws CloudioAttributeInitializationException, DuplicateItemException {
 
         for (String objectKey : cloudioFactoryNode.objects.keySet()) {
             CloudioFactoryObject cloudioFactoryObject = cloudioFactoryNode.objects.get(objectKey);
@@ -274,52 +278,41 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
             this.parseCloudioFactoryObject(cloudioFactoryObject, cloudioDynamicObject);
 
-            try {
-                cloudioDynamicNode.addObject(objectKey, cloudioDynamicObject);
-            } catch (DuplicateItemException e) {
-                throw new RuntimeException(e);
-            }
+            cloudioDynamicNode.addObject(objectKey, cloudioDynamicObject);
+
         }
     }
 
-    private void parseCloudioFactoryObject(CloudioFactoryObject cloudioFactoryObject, CloudioDynamicObject cloudioDynamicObject) throws CloudioAttributeInitializationException {
+    private void parseCloudioFactoryObject(CloudioFactoryObject cloudioFactoryObject, CloudioDynamicObject cloudioDynamicObject) throws CloudioAttributeInitializationException, DuplicateItemException {
         for (String objectKey : cloudioFactoryObject.objects.keySet()) {
             CloudioFactoryObject innerCloudioFactoryObject = cloudioFactoryObject.objects.get(objectKey);
 
             CloudioDynamicObject innerCloudioDynamicObject = new CloudioDynamicObject();
             this.parseCloudioFactoryObject(innerCloudioFactoryObject, innerCloudioDynamicObject);
 
-            try {
-                cloudioDynamicObject.addObject(objectKey, innerCloudioDynamicObject);
-            } catch (DuplicateItemException e) {
-                throw new RuntimeException(e);
-            }
+            cloudioDynamicObject.addObject(objectKey, innerCloudioDynamicObject);
         }
         for (String attributeKey : cloudioFactoryObject.attributes.keySet()) {
             CloudioFactoryAttribute cloudioFactoryAttribute = cloudioFactoryObject.attributes.get(attributeKey);
 
-            try {
-                Class type;
-                switch (cloudioFactoryAttribute.type) {
-                    case "Boolean":
-                        type = Boolean.class;
-                        break;
-                    case "Integer":
-                        type = Integer.class;
-                        break;
-                    case "Number":
-                        type = Double.class;
-                        break;
-                    case "String":
-                        type = String.class;
-                        break;
-                    default:
-                        throw new CloudioAttributeInitializationException("Unknown attribute type found while building endpoint from factory");
-                }
-                cloudioDynamicObject.addAttribute(attributeKey, type, CloudioAttributeConstraint.valueOf(cloudioFactoryAttribute.constraint));
-            } catch (DuplicateItemException e) {
-                throw new RuntimeException(e);
+            Class type;
+            switch (cloudioFactoryAttribute.type) {
+                case "Boolean":
+                    type = Boolean.class;
+                    break;
+                case "Integer":
+                    type = Integer.class;
+                    break;
+                case "Number":
+                    type = Double.class;
+                    break;
+                case "String":
+                    type = String.class;
+                    break;
+                default:
+                    throw new CloudioAttributeInitializationException("Unknown attribute type found while building endpoint from factory");
             }
+            cloudioDynamicObject.addAttribute(attributeKey, type, CloudioAttributeConstraint.valueOf(cloudioFactoryAttribute.constraint));
         }
     }
 
