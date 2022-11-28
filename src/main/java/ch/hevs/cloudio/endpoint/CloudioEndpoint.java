@@ -654,7 +654,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
             // Create factory format instance.
             String factoryFormatId = configuration.getProperty(FACTORY_FORMAT, MESSAGE_FACTORY_DEFAULT);
-            factoryFormat = CloudioFactoryFormatFactory.factoryFormat(messageFormatId);
+            factoryFormat = CloudioFactoryFormatFactory.factoryFormat(factoryFormatId);
             if (factoryFormat == null) {
                 throw new InvalidPropertyException("Unknown factory format (ch.hevs.cloudio.endpoint.factoryFormat): " +
                         "\"" + messageFormatId + "\"");
