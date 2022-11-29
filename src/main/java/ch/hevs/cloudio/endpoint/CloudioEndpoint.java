@@ -233,6 +233,12 @@ public class CloudioEndpoint implements CloudioEndpointService {
     public void addNodesFromStream(InputStream nodesInputStream, CloudioFactoryFormat factoryFormat) throws CloudioFactoryException {
         try {
             CloudioFactoryNodes cloudioFactoryNodes = factoryFormat.deserializeNodes(nodesInputStream);
+
+            //give the main properties of factory to the endpoint
+            if(this instanceof CloudioFactoryConfigurable)
+            {
+                ((CloudioFactoryConfigurable) this).setConfigurationProperties(cloudioFactoryNodes.properties);
+            }
             for (String nodeKey : cloudioFactoryNodes.nodes.keySet()) {
                 CloudioFactoryNode cloudioFactoryNode = cloudioFactoryNodes.nodes.get(nodeKey);
 
@@ -240,18 +246,22 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                 if (cloudioFactoryNode.type.equals("CloudioNode")) {
                     cloudioDynamicNode = new CloudioDynamicNode();
-                    this.parseCloudioFactoryNode(cloudioFactoryNode, cloudioDynamicNode);
 
-                    this.addNode(nodeKey, cloudioDynamicNode);
                 } else {
                     Class<?> nodeClass = Class.forName(cloudioFactoryNode.type);
                     Constructor<?> constructor = nodeClass.getConstructor();
                     Object nodeClassInstance = constructor.newInstance();
-
-                    this.parseCloudioFactoryNode(cloudioFactoryNode, (CloudioDynamicNode) nodeClassInstance);
-
-                    this.addNode(nodeKey, (CloudioNode) nodeClassInstance);
+                    cloudioDynamicNode = (CloudioDynamicNode) nodeClassInstance;
                 }
+
+                //give the node properties of factory to the correct node
+                if(cloudioDynamicNode instanceof CloudioFactoryConfigurable)
+                {
+                    ((CloudioFactoryConfigurable) cloudioDynamicNode).setConfigurationProperties(cloudioFactoryNode.properties);
+                }
+
+                this.parseCloudioFactoryNode(cloudioFactoryNode,  cloudioDynamicNode);
+                this.addNode(nodeKey, cloudioDynamicNode);
             }
         } catch (Exception exception) {
             throw new CloudioFactoryException(exception);
