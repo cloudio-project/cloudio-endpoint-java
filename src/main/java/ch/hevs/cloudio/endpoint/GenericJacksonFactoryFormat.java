@@ -1,6 +1,7 @@
 package ch.hevs.cloudio.endpoint;
 
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import org.apache.logging.log4j.LogManager;
@@ -33,6 +34,7 @@ public class GenericJacksonFactoryFormat implements CloudioFactoryFormat {
     @Override
     public CloudioFactoryNodes deserializeNodes(InputStream jsonNodesInputStream) throws Exception {
         ObjectMapper mapper = new ObjectMapper(this.factory);
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         CloudioFactoryNodes cloudioFactoryNodes = mapper.readValue(jsonNodesInputStream, CloudioFactoryNodes.class);
         return cloudioFactoryNodes;
     }
