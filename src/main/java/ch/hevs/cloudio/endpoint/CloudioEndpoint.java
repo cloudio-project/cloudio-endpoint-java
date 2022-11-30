@@ -229,14 +229,17 @@ public class CloudioEndpoint implements CloudioEndpointService {
         internal = new InternalEndpoint(uuidOrAppName, null, null);
     }
 
-    //TODO WIP Here
+    /**
+     * @param nodesInputStream
+     * @param factoryFormat
+     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from stream
+     */
     public void addNodesFromStream(InputStream nodesInputStream, CloudioFactoryFormat factoryFormat) throws CloudioFactoryException {
         try {
             CloudioFactoryNodes cloudioFactoryNodes = factoryFormat.deserializeNodes(nodesInputStream);
 
             //give the main properties of factory to the endpoint
-            if(this instanceof CloudioFactoryConfigurable)
-            {
+            if (this instanceof CloudioFactoryConfigurable) {
                 ((CloudioFactoryConfigurable) this).setConfigurationProperties(cloudioFactoryNodes.properties);
             }
             for (String nodeKey : cloudioFactoryNodes.nodes.keySet()) {
@@ -244,23 +247,28 @@ public class CloudioEndpoint implements CloudioEndpointService {
 
                 CloudioDynamicNode cloudioDynamicNode;
 
-                if (cloudioFactoryNode.type.equals("CloudioNode")) {
+                if (cloudioFactoryNode.type.equals("CloudioNode") || cloudioFactoryNode.type.isEmpty()) {
                     cloudioDynamicNode = new CloudioDynamicNode();
 
                 } else {
-                    Class<?> nodeClass = Class.forName(cloudioFactoryNode.type);
-                    Constructor<?> constructor = nodeClass.getConstructor();
-                    Object nodeClassInstance = constructor.newInstance();
-                    cloudioDynamicNode = (CloudioDynamicNode) nodeClassInstance;
+                    try {
+                        Class<?> nodeClass = Class.forName(cloudioFactoryNode.type);
+                        Constructor<?> constructor = nodeClass.getConstructor();
+                        Object nodeClassInstance = constructor.newInstance();
+                        cloudioDynamicNode = (CloudioDynamicNode) nodeClassInstance;
+                    }
+                    catch (Exception e){
+                        throw new CloudioFactoryException("Could not instantiate the class " + cloudioFactoryNode.type +
+                                " when building the endpoint structure by the Factory." );
+                    }
                 }
 
                 //give the node properties of factory to the correct node
-                if(cloudioDynamicNode instanceof CloudioFactoryConfigurable)
-                {
+                if (cloudioDynamicNode instanceof CloudioFactoryConfigurable) {
                     ((CloudioFactoryConfigurable) cloudioDynamicNode).setConfigurationProperties(cloudioFactoryNode.properties);
                 }
 
-                this.parseCloudioFactoryNode(cloudioFactoryNode,  cloudioDynamicNode);
+                this.parseCloudioFactoryNode(cloudioFactoryNode, cloudioDynamicNode);
                 this.addNode(nodeKey, cloudioDynamicNode);
             }
         } catch (Exception exception) {
@@ -268,10 +276,26 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
     }
 
+    /**
+     * @param nodesInputStream
+     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from stream
+     */
     public void addNodesFromStream(InputStream nodesInputStream) throws CloudioFactoryException {
         addNodesFromStream(nodesInputStream, this.internal.factoryFormat);
     }
 
+    /**
+     * The serialized nodes file at the following locations (The Properties files are searched in the order of listing)
+     * are used:
+     * <ul>
+     *     <li>~/.config/cloud.io/{path} on the local file system.</li>
+     *     <li>/etc/cloud.io/{path} on the local file system.</li>
+     *     <li>~{path} inside the application bundle (classpath).</li>
+     * </ul>
+     *
+     * @param path
+     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from resource
+     */
     public void addNodesFromResource(String path) throws CloudioFactoryException {
         try {
             InputStream jsonNodesInputStream = ResourceLoader.getResourceFromLocations(path,
@@ -291,11 +315,40 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
     }
 
-    private void parseCloudioFactoryNode(CloudioFactoryNode cloudioFactoryNode, CloudioDynamicNode cloudioDynamicNode) throws CloudioAttributeInitializationException, DuplicateItemException {
+    /**
+     *
+     * @param cloudioFactoryNode
+     * @param cloudioDynamicNode
+     * @throws CloudioAttributeInitializationException
+     * @throws DuplicateItemException
+     * @throws CloudioFactoryException
+     */
+    private void parseCloudioFactoryNode(CloudioFactoryNode cloudioFactoryNode, CloudioDynamicNode cloudioDynamicNode) throws CloudioAttributeInitializationException, DuplicateItemException, CloudioFactoryException {
 
         for (String objectKey : cloudioFactoryNode.objects.keySet()) {
             CloudioFactoryObject cloudioFactoryObject = cloudioFactoryNode.objects.get(objectKey);
-            CloudioDynamicObject cloudioDynamicObject = new CloudioDynamicObject();
+            CloudioDynamicObject cloudioDynamicObject;
+
+            if (cloudioFactoryObject.type.equals("CloudioObject") || cloudioFactoryObject.type.isEmpty()) {
+                cloudioDynamicObject = new CloudioDynamicObject();
+
+            } else {
+                try {
+                    Class<?> objectClass = Class.forName(cloudioFactoryObject.type);
+                    Constructor<?> constructor = objectClass.getConstructor();
+                    Object objectClassInstance = constructor.newInstance();
+                    cloudioDynamicObject = (CloudioDynamicObject) objectClassInstance;
+                }
+                catch (Exception e){
+                    throw new CloudioFactoryException("Could not instantiate the class " + cloudioFactoryObject.type +
+                            " when building the endpoint structure by the Factory." );
+                }
+            }
+
+            //give the object properties of factory to the correct object
+            if (cloudioDynamicObject instanceof CloudioFactoryConfigurable) {
+                ((CloudioFactoryConfigurable) cloudioDynamicObject).setConfigurationProperties(cloudioFactoryObject.properties);
+            }
 
             this.parseCloudioFactoryObject(cloudioFactoryObject, cloudioDynamicObject);
 
@@ -304,11 +357,42 @@ public class CloudioEndpoint implements CloudioEndpointService {
         }
     }
 
-    private void parseCloudioFactoryObject(CloudioFactoryObject cloudioFactoryObject, CloudioDynamicObject cloudioDynamicObject) throws CloudioAttributeInitializationException, DuplicateItemException {
+    /**
+     *
+     * @param cloudioFactoryObject
+     * @param cloudioDynamicObject
+     * @throws CloudioAttributeInitializationException
+     * @throws DuplicateItemException
+     * @throws CloudioFactoryException
+     */
+    private void parseCloudioFactoryObject(CloudioFactoryObject cloudioFactoryObject, CloudioDynamicObject cloudioDynamicObject) throws CloudioAttributeInitializationException, DuplicateItemException, CloudioFactoryException {
+        //Working on inner object
         for (String objectKey : cloudioFactoryObject.objects.keySet()) {
             CloudioFactoryObject innerCloudioFactoryObject = cloudioFactoryObject.objects.get(objectKey);
 
-            CloudioDynamicObject innerCloudioDynamicObject = new CloudioDynamicObject();
+            CloudioDynamicObject innerCloudioDynamicObject;
+
+            if (innerCloudioFactoryObject.type.equals("CloudioObject") || innerCloudioFactoryObject.type.isEmpty()) {
+                innerCloudioDynamicObject = new CloudioDynamicObject();
+
+            } else {
+                try {
+                    Class<?> objectClass = Class.forName(innerCloudioFactoryObject.type);
+                    Constructor<?> constructor = objectClass.getConstructor();
+                    Object innerObjectClassInstance = constructor.newInstance();
+                    innerCloudioDynamicObject = (CloudioDynamicObject) innerObjectClassInstance;
+                }
+                catch (Exception e){
+                    throw new CloudioFactoryException("Could not instantiate the class " + innerCloudioFactoryObject.type +
+                            " when building the endpoint structure by the Factory." );
+                }
+            }
+
+            //give the object properties of factory to the correct inner object
+            if (innerCloudioDynamicObject instanceof CloudioFactoryConfigurable) {
+                ((CloudioFactoryConfigurable) innerCloudioDynamicObject).setConfigurationProperties(innerCloudioFactoryObject.properties);
+            }
+
             this.parseCloudioFactoryObject(innerCloudioFactoryObject, innerCloudioDynamicObject);
 
             cloudioDynamicObject.addObject(objectKey, innerCloudioDynamicObject);
