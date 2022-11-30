@@ -1,9 +1,11 @@
 package ch.hevs.cloudio.endpoint;
 
+/**
+ *  The CloudioFactoryFormatFactory is used to instantiate a CloudioFactoryFormat with supported serialization type
+ */
 public class CloudioFactoryFormatFactory {
     static CloudioFactoryFormat json;
     static CloudioFactoryFormat cbor;
-
 
     static CloudioFactoryFormat factoryFormat(int messageFormatId) {
         if (messageFormatId == '{') {

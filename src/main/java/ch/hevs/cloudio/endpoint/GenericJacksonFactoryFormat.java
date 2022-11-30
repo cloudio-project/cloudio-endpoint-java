@@ -9,8 +9,12 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.InputStream;
 
+/**
+ * Decode node list using the Jackson serialization API. The actual format is determined by the passed factory instance.
+ * If a JsonFactory object is passed, JSON is used to serialize the data, if a CBORFactory object is passed the format
+ * used will be CBOR.
+ */
 public class GenericJacksonFactoryFormat implements CloudioFactoryFormat {
-
 
     static class JSON extends GenericJacksonFactoryFormat {
         JSON() {

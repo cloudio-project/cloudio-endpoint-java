@@ -1,11 +1,12 @@
 package ch.hevs.cloudio.endpoint;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import java.util.HashMap;
 import java.util.Map;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+/**
+ * A CloudioFactoryAttribute is used as "buffer object" during the deserialization of an Endpoint structure between
+ * the serialized Attribute and the {@link CloudioAttribute}.
+ */
 public class CloudioFactoryAttribute {
     public String constraint;
     public String type;
