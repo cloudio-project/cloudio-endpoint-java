@@ -666,7 +666,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String MESSAGE_FORMAT                  = "ch.hevs.cloudio.endpoint.messageFormat";
         private static final String MESSAGE_FORMAT_DEFAULT          = "CBOR";
         private static final String FACTORY_FORMAT                  = "ch.hevs.cloudio.endpoint.factoryFormat";
-        private static final String MESSAGE_FACTORY_DEFAULT          = "JSON";
+        private static final String FACTORY_FORMAT_DEFAULT          = "JSON";
         private static final String SUPPORTED_MESSAGE_FORMATS       = "ch.hevs.cloudio.endpoint.supportedMessageFormats";
         private static final String MQTT_CLEAN_SESSION_PROPERTY     = "ch.hevs.cloudio.endpoint.cleanSession";
         private static final String MQTT_CLEAN_SESSION_DEFAULT      = "false";
@@ -765,7 +765,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
             }
 
             // Create factory format instance.
-            String factoryFormatId = configuration.getProperty(FACTORY_FORMAT, MESSAGE_FACTORY_DEFAULT);
+            String factoryFormatId = configuration.getProperty(FACTORY_FORMAT, FACTORY_FORMAT_DEFAULT);
             factoryFormat = CloudioFactoryFormatFactory.factoryFormat(factoryFormatId);
             if (factoryFormat == null) {
                 throw new InvalidPropertyException("Unknown factory format (ch.hevs.cloudio.endpoint.factoryFormat): " +
