@@ -14,7 +14,6 @@ import javax.net.ssl.TrustManagerFactory;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.security.KeyStore;
 import java.util.*;
 
@@ -181,6 +180,15 @@ import java.util.*;
  *         exception will be thrown.
  *     </li>
  *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.factoryFormat</b><br>
+ *         Format used to deserialize nodes list with the Factory. Currently supported data formats are:
+ *         <ul>
+ *             <li>JSON: JSON Format.</li>
+ *             <li>CBOR: CBOR Format.</li>
+ *         </ul>
+ *         If this property is not set, the default "JSON" will be used.
+ *     </li>
+ *     <li>
  *         <b>ch.hevs.cloudio.endpoint.cleanSession</b><br>
  *         This property can be either "true" or "false". If it is true, a clean MQTT session is established with the
  *         central broker. This means that pending messages from a previous session will be discarded. If it is "false"
@@ -230,9 +238,12 @@ public class CloudioEndpoint implements CloudioEndpointService {
     }
 
     /**
-     * @param nodesInputStream
-     * @param factoryFormat
-     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from stream
+     * Populate the endpoint, using the factory, with a list of nodes. This list is serialized and given to the endpoint
+     * with an InputStream. Its deserialization is made by the FactoryFormat.
+     *
+     * @param nodesInputStream InputStream containing the serialized factory.
+     * @param factoryFormat    Custom FactoryFormat object used to deserialize the factory.
+     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from stream.
      */
     public void addNodesFromStream(InputStream nodesInputStream, CloudioFactoryFormat factoryFormat) throws CloudioFactoryException {
         try {
@@ -256,10 +267,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
                         Constructor<?> constructor = nodeClass.getConstructor();
                         Object nodeClassInstance = constructor.newInstance();
                         cloudioDynamicNode = (CloudioDynamicNode) nodeClassInstance;
-                    }
-                    catch (Exception e){
+                    } catch (Exception e) {
                         throw new CloudioFactoryException("Could not instantiate the class " + cloudioFactoryNode.type +
-                                " when building the endpoint structure by the Factory." );
+                                " when building the endpoint structure by the Factory.");
                     }
                 }
 
@@ -277,14 +287,20 @@ public class CloudioEndpoint implements CloudioEndpointService {
     }
 
     /**
-     * @param nodesInputStream
-     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from stream
+     * Populate the endpoint, using the factory, with a list of nodes. This list is serialized and given to the endpoint
+     * with an InputStream. Its deserialization is made by the FactoryFormat. The internal factory format is used.
+     *
+     * @param nodesInputStream InputStream containing the serialized factory.
+     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from stream.
      */
     public void addNodesFromStream(InputStream nodesInputStream) throws CloudioFactoryException {
         addNodesFromStream(nodesInputStream, this.internal.factoryFormat);
     }
 
     /**
+     * Populate the endpoint, using the factory, with a list of nodes. This list is serialized and given to the endpoint
+     * with as a file. Its deserialization is made by the FactoryFormat. The internal factory format is used.
+     * <p>
      * The serialized nodes file at the following locations (The Properties files are searched in the order of listing)
      * are used:
      * <ul>
@@ -292,9 +308,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
      *     <li>/etc/cloud.io/{path} on the local file system.</li>
      *     <li>~{path} inside the application bundle (classpath).</li>
      * </ul>
-     *
-     * @param path
-     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from resource
+     * 
+     * @param path Path of the serialized list of nodes to populate the endpoint.
+     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from resource.
      */
     public void addNodesFromResource(String path) throws CloudioFactoryException {
         try {
@@ -304,9 +320,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     "file:/etc/cloud.io/",
                     "classpath:cloud.io/");
             addNodesFromStream(jsonNodesInputStream);
-        }
-        catch (FileNotFoundException exception) {
-            throw new CloudioFactoryException("Json file "+path+" given to add Nodes From Json was not found " +
+        } catch (FileNotFoundException exception) {
+            throw new CloudioFactoryException("Ressource file " + path + " given to add Nodes to populate " +
+                    "the Endpoint was not found " +
                     "[\"home:/.config/cloud.io/" + path + "\", " +
                     "\"file:/etc/cloud.io/" + path + "\", " +
                     "\"classpath:" + path + "\"].");
@@ -316,12 +332,14 @@ public class CloudioEndpoint implements CloudioEndpointService {
     }
 
     /**
+     * Parse a cloudioFactoryNode and populate its corresponding cloudioDynamic Node with cloudioDynamicObjects and
+     * custom properties.
      *
-     * @param cloudioFactoryNode
-     * @param cloudioDynamicNode
-     * @throws CloudioAttributeInitializationException
-     * @throws DuplicateItemException
-     * @throws CloudioFactoryException
+     * @param cloudioFactoryNode The deserialized factory node.
+     * @param cloudioDynamicNode The dynamic node corresponding to the factory node.
+     * @throws CloudioAttributeInitializationException If the attribute is already initialized or the node is already online.
+     * @throws DuplicateItemException                  If there already exists an object with the given name.
+     * @throws CloudioFactoryException                 Any exception throw while adding nodes to the endpoint from resource.
      */
     private void parseCloudioFactoryNode(CloudioFactoryNode cloudioFactoryNode, CloudioDynamicNode cloudioDynamicNode) throws CloudioAttributeInitializationException, DuplicateItemException, CloudioFactoryException {
 
@@ -338,10 +356,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     Constructor<?> constructor = objectClass.getConstructor();
                     Object objectClassInstance = constructor.newInstance();
                     cloudioDynamicObject = (CloudioDynamicObject) objectClassInstance;
-                }
-                catch (Exception e){
+                } catch (Exception e) {
                     throw new CloudioFactoryException("Could not instantiate the class " + cloudioFactoryObject.type +
-                            " when building the endpoint structure by the Factory." );
+                            " when building the endpoint structure by the Factory.");
                 }
             }
 
@@ -358,12 +375,14 @@ public class CloudioEndpoint implements CloudioEndpointService {
     }
 
     /**
+     * Parse a cloudioFactoryObject and populate its corresponding cloudioDynamicObject with inner
+     * cloudioDynamicObjects, cloudioAttributes and custom properties.
      *
-     * @param cloudioFactoryObject
-     * @param cloudioDynamicObject
-     * @throws CloudioAttributeInitializationException
-     * @throws DuplicateItemException
-     * @throws CloudioFactoryException
+     * @param cloudioFactoryObject The deserialized factory object.
+     * @param cloudioDynamicObject The dynamic node corresponding to the factory node.
+     * @throws CloudioAttributeInitializationException If the attribute is already initialized or the node is already online.
+     * @throws DuplicateItemException                  If there already exists an object with the given name.
+     * @throws CloudioFactoryException                 Any exception throw while adding nodes to the endpoint from resource.
      */
     private void parseCloudioFactoryObject(CloudioFactoryObject cloudioFactoryObject, CloudioDynamicObject cloudioDynamicObject) throws CloudioAttributeInitializationException, DuplicateItemException, CloudioFactoryException {
         //Working on inner object
@@ -381,10 +400,9 @@ public class CloudioEndpoint implements CloudioEndpointService {
                     Constructor<?> constructor = objectClass.getConstructor();
                     Object innerObjectClassInstance = constructor.newInstance();
                     innerCloudioDynamicObject = (CloudioDynamicObject) innerObjectClassInstance;
-                }
-                catch (Exception e){
+                } catch (Exception e) {
                     throw new CloudioFactoryException("Could not instantiate the class " + innerCloudioFactoryObject.type +
-                            " when building the endpoint structure by the Factory." );
+                            " when building the endpoint structure by the Factory.");
                 }
             }
 
