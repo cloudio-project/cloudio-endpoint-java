@@ -12,6 +12,11 @@ targetCompatibility = 11
 group = 'ch.hevs.cloudio'
 version = '0.2.0-SNAPSHOT'
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 repositories {
     mavenCentral()
 }
