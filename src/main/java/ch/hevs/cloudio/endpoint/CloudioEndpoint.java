@@ -11,7 +11,9 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.security.KeyStore;
 import java.util.*;
 
@@ -178,6 +180,15 @@ import java.util.*;
  *         exception will be thrown.
  *     </li>
  *     <li>
+ *         <b>ch.hevs.cloudio.endpoint.factoryFormat</b><br>
+ *         Format used to deserialize nodes list with the Factory. Currently supported data formats are:
+ *         <ul>
+ *             <li>JSON: JSON Format.</li>
+ *             <li>CBOR: CBOR Format.</li>
+ *         </ul>
+ *         If this property is not set, the default "JSON" will be used.
+ *     </li>
+ *     <li>
  *         <b>ch.hevs.cloudio.endpoint.cleanSession</b><br>
  *         This property can be either "true" or "false". If it is true, a clean MQTT session is established with the
  *         central broker. This means that pending messages from a previous session will be discarded. If it is "false"
@@ -224,6 +235,208 @@ public class CloudioEndpoint implements CloudioEndpointService {
             CloudioEndpointInitializationException {
         // Call internal designated constructor with empty properties reference.
         internal = new InternalEndpoint(uuidOrAppName, null, null);
+    }
+
+    /**
+     * Populate the endpoint, using the factory, with a list of nodes. This list is serialized and given to the endpoint
+     * with an InputStream. Its deserialization is made by the FactoryFormat.
+     *
+     * @param nodesInputStream InputStream containing the serialized factory.
+     * @param factoryFormat    Custom FactoryFormat object used to deserialize the factory.
+     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from stream.
+     */
+    public void addNodesFromStream(InputStream nodesInputStream, CloudioFactoryFormat factoryFormat) throws CloudioFactoryException {
+        try {
+            CloudioFactoryNodes cloudioFactoryNodes = factoryFormat.deserializeNodes(nodesInputStream);
+
+            //give the main properties of factory to the endpoint
+            if (this instanceof CloudioFactoryConfigurable) {
+                ((CloudioFactoryConfigurable) this).setConfigurationProperties(cloudioFactoryNodes.properties);
+            }
+            for (String nodeKey : cloudioFactoryNodes.nodes.keySet()) {
+                CloudioFactoryNode cloudioFactoryNode = cloudioFactoryNodes.nodes.get(nodeKey);
+
+                CloudioDynamicNode cloudioDynamicNode;
+
+                if (cloudioFactoryNode.type.equals("CloudioNode") || cloudioFactoryNode.type.isEmpty()) {
+                    cloudioDynamicNode = new CloudioDynamicNode();
+
+                } else {
+                    try {
+                        Class<?> nodeClass = Class.forName(cloudioFactoryNode.type);
+                        Constructor<?> constructor = nodeClass.getConstructor();
+                        Object nodeClassInstance = constructor.newInstance();
+                        cloudioDynamicNode = (CloudioDynamicNode) nodeClassInstance;
+                    } catch (Exception e) {
+                        throw new CloudioFactoryException("Could not instantiate the class " + cloudioFactoryNode.type +
+                                " when building the endpoint structure by the Factory.");
+                    }
+                }
+
+                //give the node properties of factory to the correct node
+                if (cloudioDynamicNode instanceof CloudioFactoryConfigurable) {
+                    ((CloudioFactoryConfigurable) cloudioDynamicNode).setConfigurationProperties(cloudioFactoryNode.properties);
+                }
+
+                this.parseCloudioFactoryNode(cloudioFactoryNode, cloudioDynamicNode);
+                this.addNode(nodeKey, cloudioDynamicNode);
+            }
+        } catch (Exception exception) {
+            throw new CloudioFactoryException(exception);
+        }
+    }
+
+    /**
+     * Populate the endpoint, using the factory, with a list of nodes. This list is serialized and given to the endpoint
+     * with an InputStream. Its deserialization is made by the FactoryFormat. The internal factory format is used.
+     *
+     * @param nodesInputStream InputStream containing the serialized factory.
+     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from stream.
+     */
+    public void addNodesFromStream(InputStream nodesInputStream) throws CloudioFactoryException {
+        addNodesFromStream(nodesInputStream, this.internal.factoryFormat);
+    }
+
+    /**
+     * Populate the endpoint, using the factory, with a list of nodes. This list is serialized and given to the endpoint
+     * with as a file. Its deserialization is made by the FactoryFormat. The internal factory format is used.
+     * <p>
+     * The serialized nodes file at the following locations (The Properties files are searched in the order of listing)
+     * are used:
+     * <ul>
+     *     <li>~/.config/cloud.io/{path} on the local file system.</li>
+     *     <li>/etc/cloud.io/{path} on the local file system.</li>
+     *     <li>~{path} inside the application bundle (classpath).</li>
+     * </ul>
+     * 
+     * @param path Path of the serialized list of nodes to populate the endpoint.
+     * @throws CloudioFactoryException Any exception throw while adding nodes to the endpoint from resource.
+     */
+    public void addNodesFromResource(String path) throws CloudioFactoryException {
+        try {
+            InputStream jsonNodesInputStream = ResourceLoader.getResourceFromLocations(path,
+                    this,
+                    "home:" + "/.config/cloud.io/",
+                    "file:/etc/cloud.io/",
+                    "classpath:cloud.io/");
+            addNodesFromStream(jsonNodesInputStream);
+        } catch (FileNotFoundException exception) {
+            throw new CloudioFactoryException("Ressource file " + path + " given to add Nodes to populate " +
+                    "the Endpoint was not found " +
+                    "[\"home:/.config/cloud.io/" + path + "\", " +
+                    "\"file:/etc/cloud.io/" + path + "\", " +
+                    "\"classpath:" + path + "\"].");
+        } catch (Exception exception) {
+            throw new CloudioFactoryException(exception);
+        }
+    }
+
+    /**
+     * Parse a cloudioFactoryNode and populate its corresponding cloudioDynamic Node with cloudioDynamicObjects and
+     * custom properties.
+     *
+     * @param cloudioFactoryNode The deserialized factory node.
+     * @param cloudioDynamicNode The dynamic node corresponding to the factory node.
+     * @throws CloudioAttributeInitializationException If the attribute is already initialized or the node is already online.
+     * @throws DuplicateItemException                  If there already exists an object with the given name.
+     * @throws CloudioFactoryException                 Any exception throw while adding nodes to the endpoint from resource.
+     */
+    private void parseCloudioFactoryNode(CloudioFactoryNode cloudioFactoryNode, CloudioDynamicNode cloudioDynamicNode) throws CloudioAttributeInitializationException, DuplicateItemException, CloudioFactoryException {
+
+        for (String objectKey : cloudioFactoryNode.objects.keySet()) {
+            CloudioFactoryObject cloudioFactoryObject = cloudioFactoryNode.objects.get(objectKey);
+            CloudioDynamicObject cloudioDynamicObject;
+
+            if (cloudioFactoryObject.type.equals("CloudioObject") || cloudioFactoryObject.type.isEmpty()) {
+                cloudioDynamicObject = new CloudioDynamicObject();
+
+            } else {
+                try {
+                    Class<?> objectClass = Class.forName(cloudioFactoryObject.type);
+                    Constructor<?> constructor = objectClass.getConstructor();
+                    Object objectClassInstance = constructor.newInstance();
+                    cloudioDynamicObject = (CloudioDynamicObject) objectClassInstance;
+                } catch (Exception e) {
+                    throw new CloudioFactoryException("Could not instantiate the class " + cloudioFactoryObject.type +
+                            " when building the endpoint structure by the Factory.");
+                }
+            }
+
+            //give the object properties of factory to the correct object
+            if (cloudioDynamicObject instanceof CloudioFactoryConfigurable) {
+                ((CloudioFactoryConfigurable) cloudioDynamicObject).setConfigurationProperties(cloudioFactoryObject.properties);
+            }
+
+            this.parseCloudioFactoryObject(cloudioFactoryObject, cloudioDynamicObject);
+
+            cloudioDynamicNode.addObject(objectKey, cloudioDynamicObject);
+
+        }
+    }
+
+    /**
+     * Parse a cloudioFactoryObject and populate its corresponding cloudioDynamicObject with inner
+     * cloudioDynamicObjects, cloudioAttributes and custom properties.
+     *
+     * @param cloudioFactoryObject The deserialized factory object.
+     * @param cloudioDynamicObject The dynamic node corresponding to the factory node.
+     * @throws CloudioAttributeInitializationException If the attribute is already initialized or the node is already online.
+     * @throws DuplicateItemException                  If there already exists an object with the given name.
+     * @throws CloudioFactoryException                 Any exception throw while adding nodes to the endpoint from resource.
+     */
+    private void parseCloudioFactoryObject(CloudioFactoryObject cloudioFactoryObject, CloudioDynamicObject cloudioDynamicObject) throws CloudioAttributeInitializationException, DuplicateItemException, CloudioFactoryException {
+        //Working on inner object
+        for (String objectKey : cloudioFactoryObject.objects.keySet()) {
+            CloudioFactoryObject innerCloudioFactoryObject = cloudioFactoryObject.objects.get(objectKey);
+
+            CloudioDynamicObject innerCloudioDynamicObject;
+
+            if (innerCloudioFactoryObject.type.equals("CloudioObject") || innerCloudioFactoryObject.type.isEmpty()) {
+                innerCloudioDynamicObject = new CloudioDynamicObject();
+
+            } else {
+                try {
+                    Class<?> objectClass = Class.forName(innerCloudioFactoryObject.type);
+                    Constructor<?> constructor = objectClass.getConstructor();
+                    Object innerObjectClassInstance = constructor.newInstance();
+                    innerCloudioDynamicObject = (CloudioDynamicObject) innerObjectClassInstance;
+                } catch (Exception e) {
+                    throw new CloudioFactoryException("Could not instantiate the class " + innerCloudioFactoryObject.type +
+                            " when building the endpoint structure by the Factory.");
+                }
+            }
+
+            //give the object properties of factory to the correct inner object
+            if (innerCloudioDynamicObject instanceof CloudioFactoryConfigurable) {
+                ((CloudioFactoryConfigurable) innerCloudioDynamicObject).setConfigurationProperties(innerCloudioFactoryObject.properties);
+            }
+
+            this.parseCloudioFactoryObject(innerCloudioFactoryObject, innerCloudioDynamicObject);
+
+            cloudioDynamicObject.addObject(objectKey, innerCloudioDynamicObject);
+        }
+        for (String attributeKey : cloudioFactoryObject.attributes.keySet()) {
+            CloudioFactoryAttribute cloudioFactoryAttribute = cloudioFactoryObject.attributes.get(attributeKey);
+
+            Class type;
+            switch (cloudioFactoryAttribute.type) {
+                case "Boolean":
+                    type = Boolean.class;
+                    break;
+                case "Integer":
+                    type = Integer.class;
+                    break;
+                case "Number":
+                    type = Double.class;
+                    break;
+                case "String":
+                    type = String.class;
+                    break;
+                default:
+                    throw new CloudioAttributeInitializationException("Unknown attribute type found while building endpoint from factory");
+            }
+            cloudioDynamicObject.addAttribute(attributeKey, type, CloudioAttributeConstraint.valueOf(cloudioFactoryAttribute.constraint));
+        }
     }
 
     /**
@@ -452,6 +665,8 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private static final String SSL_PROTOCOL_DEFAULT            = "TLSv1.2";
         private static final String MESSAGE_FORMAT                  = "ch.hevs.cloudio.endpoint.messageFormat";
         private static final String MESSAGE_FORMAT_DEFAULT          = "CBOR";
+        private static final String FACTORY_FORMAT                  = "ch.hevs.cloudio.endpoint.factoryFormat";
+        private static final String FACTORY_FORMAT_DEFAULT          = "JSON";
         private static final String SUPPORTED_MESSAGE_FORMATS       = "ch.hevs.cloudio.endpoint.supportedMessageFormats";
         private static final String MQTT_CLEAN_SESSION_PROPERTY     = "ch.hevs.cloudio.endpoint.cleanSession";
         private static final String MQTT_CLEAN_SESSION_DEFAULT      = "false";
@@ -484,6 +699,7 @@ public class CloudioEndpoint implements CloudioEndpointService {
         private final MqttAsyncClient mqtt;
         private final boolean persistence;
         private final CloudioMessageFormat messageFormat;
+        private final CloudioFactoryFormat factoryFormat;
         private final List<CloudioEndpointListener> listeners = new LinkedList<CloudioEndpointListener>();
         private String jobsFilePath;
         private boolean inTransaction = false;
@@ -545,6 +761,14 @@ public class CloudioEndpoint implements CloudioEndpointService {
             messageFormat = CloudioMessageFormatFactory.messageFormat(messageFormatId);
             if (messageFormat == null) {
                 throw new InvalidPropertyException("Unknown message format (ch.hevs.cloudio.endpoint.messageFormat): " +
+                        "\"" + messageFormatId + "\"");
+            }
+
+            // Create factory format instance.
+            String factoryFormatId = configuration.getProperty(FACTORY_FORMAT, FACTORY_FORMAT_DEFAULT);
+            factoryFormat = CloudioFactoryFormatFactory.factoryFormat(factoryFormatId);
+            if (factoryFormat == null) {
+                throw new InvalidPropertyException("Unknown factory format (ch.hevs.cloudio.endpoint.factoryFormat): " +
                         "\"" + messageFormatId + "\"");
             }
 

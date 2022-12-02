@@ -110,3 +110,13 @@ gradle-app.setting
 **/build/
 
 # End of https://www.gitignore.io/api/gradle,intellij
+
+# Local folders that can be used by developpers to make tests 
+src/main/java/localTest/
+src/main/resources/cloud.io/
+
+# Map db generated file
+*.db
+
+# Removed whole IntelliJ configuration folder
+.idea/

@@ -154,6 +154,10 @@ public abstract class CloudioNode {
             return interfaces;
         }
 
+        protected NamedItemSet<CloudioObject.InternalObject> getStaticsObjects(){
+            return objects;
+        }
+
         void close() {
             parent = null;
 

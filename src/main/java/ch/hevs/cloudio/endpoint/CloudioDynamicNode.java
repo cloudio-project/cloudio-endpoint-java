@@ -1,5 +1,7 @@
 package ch.hevs.cloudio.endpoint;
 
+import java.util.Iterator;
+
 /**
  * The CloudioDynamicNode class allows you to create the structure of a cloud.iO node at runtime in contrast to the static model used by the CloudioNode class.
  *
@@ -157,6 +159,23 @@ public class CloudioDynamicNode extends CloudioNode {
     /*** Internal API *************************************************************************************************/
     private class InternalDynamicNode extends CloudioNode.InternalNode {
         private final NamedItemSet<CloudioObject.InternalObject> dynamicObjects = new NamedItemSet<CloudioObject.InternalObject>();
+
+        public InternalDynamicNode()
+        {
+            super();
+            NamedItemSet<CloudioObject.InternalObject> staticObjects = getStaticsObjects();
+            if(!staticObjects.isEmpty()) {
+                Iterator<CloudioObject.InternalObject> objectIterator = staticObjects.iterator();
+                while (objectIterator.hasNext()) {
+                    try {
+                        CloudioObject.InternalObject newObject = objectIterator.next();
+                        dynamicObjects.addItem(newObject);
+                    } catch (DuplicateItemException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }
 
         @Override
         public NamedItemSet<CloudioObject.InternalObject> getObjects() {
